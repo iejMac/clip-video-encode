@@ -1,0 +1,5 @@
+torch>=1.7.1,<2
+numpy>=1.19.5,<2
+torchvision>=0.10.1,<2
+git+https://github.com/openai/CLIP.git
+scikit-video
