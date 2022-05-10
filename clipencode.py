@@ -4,7 +4,6 @@ import skvideo.io as skv
 import sys
 import torch
 
-from PIL import Image
 from torchvision.transforms import Compose, ToPILImage
 
 
