@@ -14,7 +14,7 @@ if __name__ == "__main__":
     REQUIREMENTS = _read_reqs("requirements.txt")
 
     setup(
-        name="clip-encode",
+        name="clip-video-encode",
         packages=find_packages(),
         include_package_data=True,
         version="1.0.0",
@@ -24,7 +24,7 @@ if __name__ == "__main__":
         long_description_content_type="text/markdown",
         author="Maciej Kilian",
         author_email="kilianmaciej6@gmail.com",
-        url="https://github.com/iejMac/clip-encode",
+        url="https://github.com/iejMac/clip-video-encode",
         data_files=[(".", ["README.md"])],
         keywords=["machine learning"],
         install_requires=REQUIREMENTS,
