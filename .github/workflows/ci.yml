@@ -43,6 +43,7 @@ jobs:
       run: |
         python3 -m venv .env
         source .env/bin/activate
+        apt-get install ffmpeg
         make install
         make install-dev
     - name: Unit tests
