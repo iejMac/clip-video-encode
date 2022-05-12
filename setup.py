@@ -22,6 +22,7 @@ if __name__ == "__main__":
         description="Easily compute clip embeddings from video frames",
         long_description=long_description,
         long_description_content_type="text/markdown",
+        entry_points={"console_scripts": ["clip-video-encode=clip_video_encode.cli:main"]},
         author="Maciej Kilian",
         author_email="kilianmaciej6@gmail.com",
         url="https://github.com/iejMac/clip-video-encode",

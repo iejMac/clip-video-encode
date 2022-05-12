@@ -11,7 +11,7 @@ from torchvision.transforms import Compose, ToPILImage
 BS = 256
 
 #TODO: make this work with any encoder model
-def clipencode(src, dest):
+def clip_video_encode(src, dest):
   # Initialize model:
   device = "cuda" if torch.cuda.is_available() else "cpu"
   model, preprocess = clip.load("ViT-B/32", device=device)
@@ -34,7 +34,7 @@ def clipencode(src, dest):
 
 if __name__ == "__main__":
   if len(sys.argv) != 3:
-    print("Usage: python clipencode.py video.mp4 embeddings.npy")
+    print("Usage: python clip-video-encode.py video.mp4 embeddings.npy")
     sys.exit(1)
 
-  clipencode(sys.argv[1], sys.argv[2])
+  clip_video_encode(sys.argv[1], sys.argv[2])
