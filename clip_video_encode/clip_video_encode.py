@@ -39,9 +39,7 @@ def clip_video_encode(src, dest):
     ds_vid = DataLoader(proc_video, batch_size=BS)
     for i, batch in enumerate(ds_vid):
         imgs = batch.to(device)
-        video_embeddings[i * BS : (i + 1) * BS] = (
-            model.encode_image(imgs).cpu().detach().numpy()
-        )
+        video_embeddings[i * BS : (i + 1) * BS] = model.encode_image(imgs).cpu().detach().numpy()
 
     np.save(dest, video_embeddings)
 
