@@ -38,7 +38,7 @@ def clip_video_encode(src, dest):
             break
         fname = f.get("url", None)
 
-    cap = cv2.VideoCapture(fname) # pylint: disable=I1101
+    cap = cv2.VideoCapture(fname)  # pylint: disable=I1101
     if not cap.isOpened():
         print("Error: Video not opened")
         sys.exit(1)
@@ -48,7 +48,7 @@ def clip_video_encode(src, dest):
     model, preprocess = clip.load("ViT-B/32", device=device)
     preprocess = Compose([ToPILImage(), preprocess])
 
-    fc = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) # pylint: disable=I1101
+    fc = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))  # pylint: disable=I1101
     video_embeddings = np.zeros((fc, EMB_DIM))
     batch = []
 
