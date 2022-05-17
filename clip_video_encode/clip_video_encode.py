@@ -2,15 +2,18 @@
 import sys
 
 import clip
+import cv2
 import numpy as np
-import skvideo.io as skv
 import torch
+import youtube_dl
 
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToPILImage
 
 
 BS = 256
+EMB_DIM = 512
+QUALITY = '360p'
 
 
 def clip_video_encode(src, dest):
@@ -23,24 +26,47 @@ def clip_video_encode(src, dest):
     Output:
       None
     """
+    if src.endswith(".mp4"): # mp4 file
+      fname = src
+    else: # youtube link
+      ydl_opts = {}
+      ydl = youtube_dl.YoutubeDL(ydl_opts)
+      formats = ydl.extract_info(src, download=False).get('formats', None)
+      for f in formats:
+        if f.get('format_note', None) != QUALITY:
+          continue
+        break
+      fname = f.get('url', None)
+
+    cap = cv2.VideoCapture(fname)
+    if not cap.isOpened():
+      print("Error: Video not opened")
+      exit(1)
+
     # Initialize model:
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model, preprocess = clip.load("ViT-B/32", device=device)
     preprocess = Compose([ToPILImage(), preprocess])
 
-    vid = skv.vread(src)
-    video_embeddings = np.zeros((len(vid), 512))
+    fc = int(cap.get(cv2. CAP_PROP_FRAME_COUNT))
+    video_embeddings = np.zeros((fc, EMB_DIM))
+    batch = []
 
-    proc_video = torch.zeros((len(vid), 3, 224, 224))  # pylint: disable=[E1101]
-    for i, frame in enumerate(vid):
-        proc_video[i] = preprocess(frame).unsqueeze(0)
+    ret = True
+    counter = 0
+    while ret:
+      ret, frame = cap.read()
 
-    # Batch up and embed video
-    ds_vid = DataLoader(proc_video, batch_size=BS)
-    for i, batch in enumerate(ds_vid):
-        imgs = batch.to(device)
-        video_embeddings[i * BS : (i + 1) * BS] = model.encode_image(imgs).cpu().detach().numpy()
+      if (len(batch) == BS) or ((not ret) and (len(batch) > 0)): # encode
+        t_batch = torch.stack(batch).to(device)
+        video_embeddings[counter:counter+len(batch)] = model.encode_image(t_batch).cpu().detach().numpy()
+        counter += len(batch)
+        batch = []
 
+      if ret:
+        batch.append(preprocess(frame))
+
+    video_embeddings = video_embeddings[:counter]
     np.save(dest, video_embeddings)
 
 
