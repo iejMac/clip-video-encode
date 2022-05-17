@@ -59,9 +59,7 @@ def clip_video_encode(src, dest):
 
         if (len(batch) == BS) or ((not ret) and (len(batch) > 0)):  # encode
             t_batch = torch.stack(batch).to(device)
-            video_embeddings[counter : counter + len(batch)] = (
-                model.encode_image(t_batch).cpu().detach().numpy()
-            )
+            video_embeddings[counter : counter + len(batch)] = model.encode_image(t_batch).cpu().detach().numpy()
             counter += len(batch)
             batch = []
 
