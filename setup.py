@@ -9,7 +9,11 @@ if __name__ == "__main__":
     def _read_reqs(relpath):
         fullpath = os.path.join(os.path.dirname(__file__), relpath)
         with open(fullpath) as f:
-            return [s.strip() for s in f.readlines() if (s.strip() and not s.startswith("#"))]
+            return [
+                s.strip()
+                for s in f.readlines()
+                if (s.strip() and not s.startswith("#"))
+            ]
 
     REQUIREMENTS = _read_reqs("requirements.txt")
 
@@ -22,7 +26,9 @@ if __name__ == "__main__":
         description="Easily compute clip embeddings from video frames",
         long_description=long_description,
         long_description_content_type="text/markdown",
-        entry_points={"console_scripts": ["clip-video-encode=clip_video_encode.cli:main"]},
+        entry_points={
+            "console_scripts": ["clip-video-encode=clip_video_encode.cli:main"]
+        },
         author="Maciej Kilian",
         author_email="kilianmaciej6@gmail.com",
         url="https://github.com/iejMac/clip-video-encode",
