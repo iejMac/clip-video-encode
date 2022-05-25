@@ -15,16 +15,13 @@ FRAME_COUNTS = {
 def test_encode():
     test_path = "tests/test_videos"
     with tempfile.TemporaryDirectory() as tmpdir:
+        clip_video_encode(os.path.join(test_path, "test_list.txt"), tmpdir)
         for vid in FRAME_COUNTS.keys():
             if vid.endswith(".mp4"):
-                src = os.path.join(test_path, vid)
-                dst = os.path.join(tmpdir, vid[:-4] + ".npy")
+                ld = vid[:-4] + ".npy"
             else:
-                src = vid
-                dst = os.path.join(tmpdir, vid.split("=")[-1] + ".npy")
+                ld = vid.split("=")[-1] + ".npy"
 
-            clip_video_encode(src, dst)
-
-            embeddings = np.load(dst)
+            embeddings = np.load(os.path.join(tmpdir, ld))
             assert embeddings.shape[0] == FRAME_COUNTS[vid]  # frame count
             assert embeddings.shape[1] == 512  # embed dim

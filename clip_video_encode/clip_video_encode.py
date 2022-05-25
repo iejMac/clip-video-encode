@@ -1,4 +1,5 @@
 """encode video with CLIP"""
+import os
 import sys
 
 import clip
@@ -26,7 +27,7 @@ def clip_video_encode(src, dest=None):
         str: path to txt file with multiple mp4's or youtube links
         list: list with multiple mp4's or youtube links
       dest:
-        str: where to save embeddings
+        str: directory where to save embeddings to
         None: dst = src + .npy
 
     Output:
@@ -50,13 +51,21 @@ def clip_video_encode(src, dest=None):
         if not fname.endswith(".mp4"):  # youtube link
             ydl_opts = {}
             ydl = youtube_dl.YoutubeDL(ydl_opts)
-            formats = ydl.extract_info(fname, download=False).get("formats", None)
+            info = ydl.extract_info(fname, download=False)
+            formats = info.get("formats", None)
             f = None
             for f in formats:
                 if f.get("format_note", None) != QUALITY:
                     continue
                 break
+
             fname = f.get("url", None)
+
+            dst_name = info.get("id") + ".npy"
+            dst = dst_name if dest is None else os.path.join(dest, dst_name)
+        else:
+            dst_name = fname[:-4].split("/")[-1] + ".npy"
+            dst = fname[:-4] + ".npy" if dest is None else os.path.join(dest, dst_name)
 
         cap = cv2.VideoCapture(fname)  # pylint: disable=I1101
         if not cap.isOpened():
@@ -82,7 +91,6 @@ def clip_video_encode(src, dest=None):
                 batch.append(preprocess(frame))
 
         video_embeddings = video_embeddings[:counter]
-        dst = fname[:-4] + ".npy" if dest is None else dest
         np.save(dst, video_embeddings)
 
 
