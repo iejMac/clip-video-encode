@@ -9,6 +9,7 @@ import torch
 import youtube_dl
 
 from torchvision.transforms import Compose, ToPILImage
+from tqdm import tqdm
 
 
 BS = 256
@@ -47,7 +48,7 @@ def clip_video_encode(src, dest=None):
     model, preprocess = clip.load("ViT-B/32", device=device)
     preprocess = Compose([ToPILImage(), preprocess])
 
-    for fname in fnames:
+    for fname in tqdm(fnames):
         if not fname.endswith(".mp4"):  # youtube link
             ydl_opts = {}
             ydl = youtube_dl.YoutubeDL(ydl_opts)
