@@ -17,7 +17,7 @@ EMB_DIM = 512
 QUALITY = "360p"
 
 
-def clip_video_encode(src, dest=None):
+def clip_video_encode(src, dest=None, take_every_nth=1):
     """
     Encode frames using CLIP image encoder
 
@@ -30,6 +30,8 @@ def clip_video_encode(src, dest=None):
       dest:
         str: directory where to save embeddings to
         None: dst = src + .npy
+      take_every_nth:
+        int: only take every nth frame
 
     Output:
       None
@@ -79,6 +81,7 @@ def clip_video_encode(src, dest=None):
 
         ret = True
         counter = 0
+        ind = 0
         while ret:
             ret, frame = cap.read()
 
@@ -88,8 +91,9 @@ def clip_video_encode(src, dest=None):
                 counter += len(batch)
                 batch = []
 
-            if ret:
+            if ret and (ind % take_every_nth == 0):
                 batch.append(preprocess(frame))
+            ind += 1
 
         video_embeddings = video_embeddings[:counter]
         np.save(dst, video_embeddings)
