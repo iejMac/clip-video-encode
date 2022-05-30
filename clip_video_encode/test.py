@@ -1,28 +1,36 @@
 import time
 
+import clip
+import torch
 
-from torchvision.transforms import ToTensor
+from torchvision.transforms import Compose, ToPILImage
 
 from simplereader import VideoReader
 from simplebatcher import FrameBatcher
+from simplemapper import FrameMapper
+from simplewriter import EmbeddingWriter
 
 
 
-BATCH_SIZE = 60
+BATCH_SIZE = 100
 
 
-# vids = ["test_data/vid1.mp4", "test_data/vid2.mp4", "test_data/vid3.mp4", "test_data/vid4.mp4", "https://www.youtube.com/watch?v=EKtBQbK4IX0"]
 vids = ["test_data/vid1.mp4", "test_data/vid2.mp4", "test_data/vid3.mp4", "test_data/vid4.mp4"]
 
 
 reader_vids = vids # later this might be only a subset of vids and multiple readers
 
-prepro = ToTensor()
+
+# Initialize model:
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model, preprocess = clip.load("ViT-B/32", device=device)
+preprocess = Compose([ToPILImage(), preprocess])
 
 
-vr = VideoReader(preprocess=prepro)
+vr = VideoReader(preprocess=preprocess)
 fb = FrameBatcher()
-
+fm = FrameMapper(model=model)
+ew = EmbeddingWriter(destination_dir="test_npy")
 
 vid_start_time = time.perf_counter()
 
@@ -34,62 +42,44 @@ for vid in vids:
   print(f"Read {len(frames)} frames time = {read_time}")
 
   fb.add_frames(frames, dst_name)
+  ew.init_video(dst_name, len(frames))
 
   while len(fb) >= BATCH_SIZE:
     start_time = time.perf_counter()
-    batch = fb.get_batch(BATCH_SIZE)
+    batch, vid_inds = fb.get_batch(BATCH_SIZE)
+    batch = batch.to(device)
+    print(vid_inds)
     batch_time = time.perf_counter() - start_time
+    print(f"Batch {batch.shape} time = {batch_time}")
 
-    print(f"Batch {batch.shape} tensor time = {batch_time}")
+    start_time = time.perf_counter()
+    embeddings = fm(batch)
+    model_time = time.perf_counter() - start_time
+    print(f"Model {embeddings.shape} time = {model_time}")
 
+    # Separate by video
+    for v, i0, it in vid_inds:
+      vid_embeddings = ew.add_embeddings(v, embeddings[i0:it])
+
+  start_time = time.perf_counter()
+  flushed_count = ew.flush() 
+  if flushed_count > 0:
+    flush_time = time.perf_counter() - start_time
+    print(f"Flushed {flushed_count} embeddings time = {flush_time}")
 
 
 # Get leftover batches:
+'''
 print("LEFTOVER BATCHES:")
-while len(fb) > 0:
-  start_time = time.perf_counter()
-  batch = fb.get_batch(BATCH_SIZE)
-  batch_time = time.perf_counter() - start_time
+JUST COPY FROM MAIN LOOP ONCE DONE WITH get_batch(len(fb))
+'''
 
-  print(f"Batch {batch.shape} tensor time = {batch_time}")
+import numpy as np
+for k, v in ew.embeddings.items():
+  print(np.concatenate(v).shape)
 
 
 proc_vid_time = time.perf_counter() - vid_start_time
 print(f"Time to process all vids = {proc_vid_time}")
 
 
-
-''' Multithreading start, paused for now
-from reader import VideoReader
-from bucket import FrameBucket
-from batcher import FrameBatcher
-
-from threading import Thread
-
-fb = FrameBucket(
-  vids,
-)
-
-vr = VideoReader(
-  reader_vids,
-  fb,
-)
-bt = FrameBatcher(
-  fb,
-  20,
-)
-
-# Fill up frame bucket with frames
-thr1 = Thread(target=vr.generate_frames)
-thr2 = Thread(target=bt.make_batches)
-
-thr1.start()
-thr2.start()
-
-
-
-thr1.join()
-thr2.join()
-
-# print(fb.frame_dict)
-'''
