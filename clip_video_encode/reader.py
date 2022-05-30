@@ -5,13 +5,15 @@ import youtube_dl
 
 from torch.nn import Identity
 
-from framebucket import FrameBucket
+from bucket import FrameBucket
 
 
 QUALITY = "360p"
 
 
 class VideoReader:
+  """Reads videos and inserts frames into FrameBucket"""
+
   def __init__(
     self,
     videos,
@@ -19,6 +21,13 @@ class VideoReader:
     preprocess=Identity(),
     take_every_nth=1,
   ):
+    """
+      Input:
+        videos: list of mp4 files or youtube links
+        frame_bucket: FrameBucket object to insert frames into
+        preprocess: preprocessing function for frames
+        take_every_nth: only take every nth frame
+    """
 
     assert isinstance(frame_bucket, FrameBucket)
 
