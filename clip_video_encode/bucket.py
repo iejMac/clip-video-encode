@@ -18,7 +18,7 @@ class FrameBucket:
   def __len__(self):
     l = 0
     for key in self.keys:
-      l += len(self.frame_dict[key])
+      l += len(self.frame_dict[key]) - self.used_ind[key]
     return l
 
   def add_frame(self, vid, frame):
