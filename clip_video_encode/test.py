@@ -27,8 +27,8 @@ model, preprocess = clip.load("ViT-B/32", device=device)
 preprocess = Compose([ToPILImage(), preprocess])
 
 
-vr = VideoReader(preprocess=preprocess)
-fb = FrameBatcher()
+vr = VideoReader()
+fb = FrameBatcher(preprocess=preprocess)
 fm = FrameMapper(model=model)
 ew = EmbeddingWriter(destination_dir="test_npy")
 
@@ -39,7 +39,7 @@ for vid in vids:
   start_time = time.perf_counter()
   frames, dst_name = vr.generate_frames(vid)
   read_time = time.perf_counter() - start_time
-  print(f"Read {len(frames)} frames time = {read_time}")
+  print(f"Read rate : {len(frames) / read_time} [samples/s]")
 
   fb.add_frames(frames, dst_name)
   ew.init_video(dst_name, len(frames))
@@ -48,14 +48,13 @@ for vid in vids:
     start_time = time.perf_counter()
     batch, vid_inds = fb.get_batch(BATCH_SIZE)
     batch = batch.to(device)
-    print(vid_inds)
     batch_time = time.perf_counter() - start_time
-    print(f"Batch {batch.shape} time = {batch_time}")
+    print(f"Batch rate {batch.shape[0] / batch_time} [samples/s]")
 
     start_time = time.perf_counter()
     embeddings = fm(batch)
     model_time = time.perf_counter() - start_time
-    print(f"Model {embeddings.shape} time = {model_time}")
+    print(f"Model rate {embeddings.shape[0] / model_time} [samples/s]")
 
     # Separate by video
     for v, i0, it in vid_inds:
@@ -65,7 +64,7 @@ for vid in vids:
   flushed_count = ew.flush() 
   if flushed_count > 0:
     flush_time = time.perf_counter() - start_time
-    print(f"Flushed {flushed_count} embeddings time = {flush_time}")
+    print(f"Flushed rate {flushed_count / flush_time} [samples/s]")
 
 
 # Get leftover batches:

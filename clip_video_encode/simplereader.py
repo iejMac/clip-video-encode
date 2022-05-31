@@ -17,11 +17,9 @@ QUALITY = "360p"
 class VideoReader:
   def __init__(
     self,
-    preprocess=Identity(),
     take_every_nth=1,
   ):
 
-    self.preprocess = preprocess
     self.take_every_nth = take_every_nth
 
   def generate_frames(self, vid):
@@ -60,7 +58,7 @@ class VideoReader:
         ret, frame = cap.read()
 
         if ret and (ind % self.take_every_nth == 0):
-            video_frames.append(self.preprocess(frame))
+            video_frames.append(frame)
         ind += 1
 
     return video_frames, dst_name

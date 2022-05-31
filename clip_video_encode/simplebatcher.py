@@ -1,8 +1,16 @@
 import torch
 
+from multiprocessing.pool import ThreadPool
+
+
+POSTPROC_SHAPE = (3, 224, 224)
+DIV_COUNT = 10
+
 
 class FrameBatcher:
-  def __init__(self):
+  def __init__(self, preprocess):
+    self.preprocess = preprocess
+
     self.frames = {}
   
   def __len__(self):
@@ -30,4 +38,16 @@ class FrameBatcher:
         self.frames.pop(vid)
       else:
         self.frames[vid] = frames[size_left:]
-    return torch.stack(batch), vid_inds
+
+    torch_batch = torch.zeros((size, *POSTPROC_SHAPE))
+    chunk_size = int(size/DIV_COUNT)
+
+    with ThreadPool(DIV_COUNT) as pool:
+      def prepro_samples(i):
+        sl = slice(i * chunk_size, (i+1) * chunk_size) if (i < DIV_COUNT - 1)  else slice(i * chunk_size, None)
+        torch_batch[sl] = torch.stack([self.preprocess(fr) for fr in batch[sl]])
+
+      for _ in pool.imap_unordered(prepro_samples, range(DIV_COUNT)):
+        pass
+
+    return torch_batch, vid_inds
