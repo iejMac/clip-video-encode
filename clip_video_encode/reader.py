@@ -5,41 +5,36 @@ import youtube_dl
 
 from torch.nn import Identity
 
-from bucket import FrameBucket
+from multiprocessing.pool import ThreadPool
 
 
 QUALITY = "360p"
+MAX_THREAD_COUNT = 8
+
+#TODO: research faster VideoReaders
+# https://towardsdatascience.com/lightning-fast-video-reading-in-python-c1438771c4e6
+# - VidGear https://pypi.org/project/vidgear/
+# - torchvision.io.VideoReader
 
 
 class VideoReader:
-  """Reads videos and inserts frames into FrameBucket"""
-
   def __init__(
     self,
-    videos,
-    frame_bucket,
-    preprocess=Identity(),
     take_every_nth=1,
   ):
-    """
-      Input:
-        videos: list of mp4 files or youtube links
-        frame_bucket: FrameBucket object to insert frames into
-        preprocess: preprocessing function for frames
-        take_every_nth: only take every nth frame
-    """
 
-    assert isinstance(frame_bucket, FrameBucket)
-
-    self.videos = videos
-    self.preprocess = preprocess
     self.take_every_nth = take_every_nth
-    self.framebucket = frame_bucket
 
-  def generate_frames(self):
-    """Starts generating frames from video list"""
+  def read_vids(self, vids):
 
-    for vid in self.videos:
+    frams = {}
+
+    with ThreadPool(MAX_THREAD_COUNT) as pool:
+
+      def generate_frames(vid):
+
+        video_frames = []
+
         if not vid.endswith(".mp4"):  # youtube link
             ydl_opts = {}
             ydl = youtube_dl.YoutubeDL(ydl_opts)
@@ -63,7 +58,8 @@ class VideoReader:
         cap = cv2.VideoCapture(cv2_vid)  # pylint: disable=I1101
         if not cap.isOpened():
             print(f"Error: {vid} not opened")
-            continue
+            # continue
+            return video_frames, dst_name
 
         ret = True
         ind = 0
@@ -71,8 +67,12 @@ class VideoReader:
             ret, frame = cap.read()
 
             if ret and (ind % self.take_every_nth == 0):
-                self.framebucket.add_frame(vid, self.preprocess(frame))
+                video_frames.append(frame)
             ind += 1
 
-        # Set dst as signal that a video finished loading in
-        self.framebucket.set_dst(vid, dst_name)
+        frams[dst_name] = video_frames
+
+      for _ in pool.imap_unordered(generate_frames, vids):
+        pass
+    
+    return frams
