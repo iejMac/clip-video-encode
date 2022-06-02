@@ -1,55 +1,59 @@
+import torch
 
-from bucket import FrameBucket
+from torch.utils.data import Dataset, DataLoader
 
-import time
-from copy import deepcopy
+POSTPROC_SHAPE = (3, 224, 224)
 
-
-class FrameBatcher:
-  """Watches FrameBucket and extracts full batches to send to mapper"""
-  
+class HelperDataset(Dataset):
   def __init__(
     self,
-    frame_bucket,
-    batch_size=256,
+    imgs,
+    preprocess,
   ):
-    """
-      Input:
-        frame_bucket: FrameBucket object to watch for full batches
-        batch_size: max size of batch to send to mapper
-    """
-    self.framebucket = frame_bucket
-    self.batch_size = batch_size
+    super().__init__()
+    self.imgs = imgs
+    self.preprocess = preprocess
+  def __len__(self):
+    return len(self.imgs)
+  def __getitem__(self, ind):
+    return self.preprocess(self.imgs[ind])
 
-    # self.not_done = deepcopy(self.framebucket.keys)
+def ds_to_dl(ds, bs, n_work):
+  return DataLoader(
+    ds,
+    batch_size = bs,
+    shuffle = False,
+    num_workers = n_work,
+  )
 
-  def make_batches(self):
-    while True:
-      '''
-      for key in self.not_done:
-        if self.framebucket.dst_dict[key] != None:
-          print("============")
-          print(f"{key} done!")
-          print(f"{key} has {len(self.framebucket.frame_dict[key])} frames of shape {self.framebucket.frame_dict[key][0].shape}")
-          self.not_done.remove(key)
-          self.framebucket.frame_dict[key] = [] # empty video frames
-      '''
+class FrameBatcher(Dataset):
+  def __init__(self, preprocess):
+    self.preprocess = preprocess
 
-      if len(self.framebucket) >= self.batch_size:
-        batch = []
-        for key in self.framebucket.keys:
-          cur_ind = self.framebucket.used_ind[key]
+    self.frames = {}
 
-          frame_count = len(self.framebucket.frame_dict[key]) - cur_ind # n frames unused
-          batch_left = batch_size - len(batch)
-          
-          use_from_key = number
-          self.framebucket.used_ind[key] += use_from_key
-          
-          batch += self.framebucket.frame_dict[key][cur_ind:cur_ind + use_from_key]
-        
+  def __len__(self):
+    l = 0
+    for vid in self.frames.keys():
+      l += len(self.frames[vid])
+    return l
 
-      if len(self.not_done) == 0:
-        break
-      time.sleep(0.01)
-      
+  def add_frames(self, frames, dst):
+    self.frames[dst] = frames
+
+  def get_dataloader(self, batch_size, n_work):
+    all_frames = []
+    vid_inds = []
+    for vid, frames in list(self.frames.items()):
+      # inds = [vid, start_ind_of_vid, end_ind_of_vid]
+      inds = [vid, len(all_frames), -1]
+      all_frames += frames
+      inds[2] = len(all_frames)
+
+      vid_inds.append(inds)
+      self.frames.pop(vid)
+
+    ds = HelperDataset(all_frames, self.preprocess)
+    dl = ds_to_dl(ds, batch_size, n_work)
+
+    return dl, vid_inds
