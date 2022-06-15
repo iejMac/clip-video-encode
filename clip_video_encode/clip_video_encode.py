@@ -1,23 +1,32 @@
 """encode video with CLIP"""
-import os
 import sys
 
 import clip
-import cv2
 import numpy as np
 import torch
-import youtube_dl
 
-from torchvision.transforms import Compose, ToPILImage
-from tqdm import tqdm
+from multiprocessing import SimpleQueue, Process, shared_memory
+from torchvision.transforms import ToPILImage, Compose, ToTensor, Normalize
+
+# from .reader_ffmpeg import read_vids
+from .batcher import get_dl
+from .reader import read_vids
+from .simplemapper import FrameMapper
+from .writer import write_embeddings
 
 
-BS = 256
+BATCH_SIZE = 256
+VID_CHUNK_SIZE = 100
 EMB_DIM = 512
 QUALITY = "360p"
+N_DATASET_WORKERS = 8
 
 
-def clip_video_encode(src, dest=None, take_every_nth=1):
+def _convert_image_to_rgb(image):
+    return image.convert("RGB")
+
+
+def clip_video_encode(src, dest="", take_every_nth=1):
     """
     Encode frames using CLIP image encoder
 
@@ -29,7 +38,7 @@ def clip_video_encode(src, dest=None, take_every_nth=1):
         list: list with multiple mp4's or youtube links
       dest:
         str: directory where to save embeddings to
-        None: dst = src + .npy
+        None: dest = src + .npy
       take_every_nth:
         int: only take every nth frame
 
@@ -47,61 +56,49 @@ def clip_video_encode(src, dest=None, take_every_nth=1):
 
     # Initialize model:
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model, preprocess = clip.load("ViT-B/32", device=device)
-    preprocess = Compose([ToPILImage(), preprocess])
+    model, _ = clip.load("ViT-B/32", device=device)
+    preprocess = Compose(
+        [
+            ToPILImage(),
+            _convert_image_to_rgb,
+            ToTensor(),
+            Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
+        ]
+    )
 
-    for fname in tqdm(fnames):
-        if not fname.endswith(".mp4"):  # youtube link
-            ydl_opts = {}
-            ydl = youtube_dl.YoutubeDL(ydl_opts)
-            info = ydl.extract_info(fname, download=False)
-            formats = info.get("formats", None)
-            f = None
-            for f in formats:
-                if f.get("format_note", None) != QUALITY:
-                    continue
-                break
+    info_q = SimpleQueue()
+    complete_q = SimpleQueue()  # TODO: SharedMemory hack, do properly
 
-            fname = f.get("url", None)
+    fm = FrameMapper(model)
+    vr_proc = Process(target=read_vids, args=(fnames, info_q, complete_q, VID_CHUNK_SIZE, take_every_nth))
+    vr_proc.start()
 
-            dst_name = info.get("id") + ".npy"
-            dst = dst_name if dest is None else os.path.join(dest, dst_name)
-        else:
-            dst_name = fname[:-4].split("/")[-1] + ".npy"
-            dst = fname[:-4] + ".npy" if dest is None else os.path.join(dest, dst_name)
+    while True:
+        info = info_q.get()
+        if isinstance(info, str):
+            break
 
-        cap = cv2.VideoCapture(fname)  # pylint: disable=I1101
-        if not cap.isOpened():
-            print("Error: Video not opened")
-            sys.exit(1)
+        shm = shared_memory.SharedMemory(name=info["shm_name"])
+        block = np.ndarray((info["frame_count"], 224, 224, 3), dtype=np.uint8, buffer=shm.buf)
+        dl = get_dl(block, preprocess, BATCH_SIZE, N_DATASET_WORKERS)
 
-        fc = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))  # pylint: disable=I1101
-        video_embeddings = np.zeros((fc, EMB_DIM))
-        batch = []
+        embeddings = []
+        for batch in dl:
+            with torch.no_grad():
+                emb = fm(batch.to(device))
+                embeddings.append(emb)
 
-        ret = True
-        counter = 0
-        ind = 0
-        while ret:
-            ret, frame = cap.read()
+        embeddings = np.concatenate(embeddings)
+        write_embeddings(info["ind_dict"], embeddings, dest)
+        shm.close()
 
-            if (len(batch) == BS) or ((not ret) and (len(batch) > 0)):  # encode
-                t_batch = torch.stack(batch).to(device)
-                video_embeddings[counter : counter + len(batch)] = model.encode_image(t_batch).cpu().detach().numpy()
-                counter += len(batch)
-                batch = []
-
-            if ret and (ind % take_every_nth == 0):
-                batch.append(preprocess(frame))
-            ind += 1
-
-        video_embeddings = video_embeddings[:counter]
-        np.save(dst, video_embeddings)
+    complete_q.put("DONE_MAPPING")  # TODO: SharedMemory hack, do properly
+    vr_proc.join()
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python clip-video-encode.py video.mp4 embeddings.npy")
+    if len(sys.argv) != 4:
+        print("Usage: python clip-video-encode.py video.mp4 embeddings.npy take_every_nth")
         sys.exit(1)
 
-    clip_video_encode(sys.argv[1], sys.argv[2])
+    clip_video_encode(sys.argv[1], sys.argv[2], int(sys.argv[3]))
