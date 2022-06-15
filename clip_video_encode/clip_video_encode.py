@@ -1,7 +1,6 @@
 """encode video with CLIP"""
 import os
 import sys
-import time
 
 import clip
 import cv2
@@ -15,6 +14,7 @@ from tqdm import tqdm
 
 from .batcher import get_dl
 from .reader import read_vids
+
 # from .reader_ffmpeg import read_vids
 from .simplemapper import FrameMapper
 from .writer import write_embeddings
@@ -29,6 +29,7 @@ N_DATASET_WORKERS = 8
 
 def _convert_image_to_rgb(image):
     return image.convert("RGB")
+
 
 def clip_video_encode(src, dest=None, take_every_nth=1):
     """
@@ -61,64 +62,44 @@ def clip_video_encode(src, dest=None, take_every_nth=1):
     # Initialize model:
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model, _ = clip.load("ViT-B/32", device=device)
-    preprocess = Compose([
-        ToPILImage(), 
-        _convert_image_to_rgb,
-        ToTensor(), 
-        Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711))
-    ])
+    preprocess = Compose(
+        [
+            ToPILImage(),
+            _convert_image_to_rgb,
+            ToTensor(),
+            Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
+        ]
+    )
 
     info_q = SimpleQueue()
-    complete_q = SimpleQueue() # TODO: SharedMemory hack, do properly
+    complete_q = SimpleQueue()  # TODO: SharedMemory hack, do properly
 
     fm = FrameMapper(model)
-
     vr_proc = Process(target=read_vids, args=(fnames, info_q, complete_q, VID_CHUNK_SIZE, take_every_nth))
-
-    tot_start_time = time.perf_counter()
-    TOT_FRAME_COUNT = 0
-
     vr_proc.start()
+
     while True:
         info = info_q.get()
-
         if isinstance(info, str):
             break
 
         shm = shared_memory.SharedMemory(name=info["shm_name"])
         block = np.ndarray((info["frame_count"], 224, 224, 3), dtype=np.uint8, buffer=shm.buf)
-
         dl = get_dl(block, preprocess, BATCH_SIZE, N_DATASET_WORKERS)
-
-        start_time = time.perf_counter()
 
         embeddings = []
         for batch in dl:
-          with torch.no_grad():
-            emb = fm(batch.to(device))
-            embeddings.append(emb)
+            with torch.no_grad():
+                emb = fm(batch.to(device))
+                embeddings.append(emb)
 
         embeddings = np.concatenate(embeddings)
-        frame_count = len(embeddings)
-
-        proc_time = time.perf_counter() - start_time
-        print(f"PROC FPS: {frame_count/proc_time}")
-
-        start_time = time.perf_counter()
         write_embeddings(info["ind_dict"], embeddings, dest)
-        write_time = time.perf_counter() - start_time
-        print(f"WRITE FPS: {frame_count/write_time}")
-
-        TOT_FRAME_COUNT += frame_count
         shm.close()
 
-    complete_q.put("DONE_MAPPING") # TODO: SharedMemory hack, do properly
-
+    complete_q.put("DONE_MAPPING")  # TODO: SharedMemory hack, do properly
     vr_proc.join()
 
-    read_time = time.perf_counter() - tot_start_time
-    print(read_time)
-    print(f"FULL PROCESS FPS: {TOT_FRAME_COUNT/read_time}")
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
