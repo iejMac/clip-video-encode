@@ -1,6 +1,6 @@
+"""testing various video reading methods"""
 import time
 import glob
-import subprocess
 
 import numpy as np
 
@@ -19,8 +19,7 @@ print(len(VIDS))
 
 # default samplign is bicubic (https://trac.ffmpeg.org/wiki/Scaling)
 def test_ffmpeg(fps):
-    ten = fps
-
+    """tests reading using python-ffmpeg"""
     frams = {}
 
     with ThreadPool(MAX_THREAD_COUNT) as pool:
@@ -52,13 +51,13 @@ def test_ffmpeg(fps):
             pass
 
     frame_count = 0
-    for k, v in frams.items():
+    for v in frams.values():
         frame_count += len(v)
     print(frame_count)
 
 
 def test_cv2(take_every_nth):
-
+    """tests reading using cv2"""
     frams = {}
 
     with ThreadPool(MAX_THREAD_COUNT) as pool:
@@ -105,12 +104,13 @@ def test_cv2(take_every_nth):
             pass
 
     frame_count = 0
-    for k, v in frams.items():
+    for v in frams.values():
         frame_count += len(v)
     print(frame_count)
 
 
 def test_method(method, args):
+    """generic func for displaying info about method performance"""
     start_time = time.perf_counter()
 
     meth_proc = Process(target=method, args=args)

@@ -1,10 +1,7 @@
-import os
-
+"""reader - uses cv2 to read frames from videos"""
 import cv2
 import youtube_dl
 import numpy as np
-
-from torch.nn import Identity
 
 from multiprocessing import shared_memory
 from multiprocessing.pool import ThreadPool
@@ -17,7 +14,18 @@ IMG_SIDE = 224
 
 
 def read_vids(vids, queue, termination_queue=None, chunk_size=1, take_every_nth=1):
+    """
+    Reads list of videos, saves frames to /dev/shm, and passes reading info through
+    multiprocessing queue
 
+    Input:
+      vids - list of videos (either path or youtube link)
+      queue - multiprocessing queue used to pass frame block information
+      termination_queue - queue used to pass information that all frames are mapped so
+                          SharedMemory objects can be unlinked
+      chunk_size - size of chunk of videos to take for parallel reading
+      take_every_nth - offset between frames of video (to lower FPS)
+    """
     shms = []
 
     while len(vids) > 0:
@@ -46,12 +54,9 @@ def read_vids(vids, queue, termination_queue=None, chunk_size=1, take_every_nth=
                     cv2_vid = f.get("url", None)
 
                     dst_name = info.get("id") + ".npy"
-                    # dst = dst_name if self.dest is None else os.path.join(self.dest, dst_name)
-
                 else:
                     cv2_vid = vid
                     dst_name = vid[:-4].split("/")[-1] + ".npy"
-                    # dst = vid[:-4] + ".npy" if self.dest is None else os.path.join(self.dest, dst_name)
 
                 cap = cv2.VideoCapture(cv2_vid)  # pylint: disable=I1101
 
@@ -96,11 +101,9 @@ def read_vids(vids, queue, termination_queue=None, chunk_size=1, take_every_nth=
 
         ind_dict = {}
         frame_count = 0
-        max_h, max_w = 0, 0
         for k, v in frams.items():
             ind_dict[k] = (frame_count, frame_count + len(v))
             frame_count += len(v)
-
 
         full_shape = (frame_count, *POSTPROC_SHAPE)
 

@@ -1,21 +1,16 @@
 """encode video with CLIP"""
-import os
 import sys
 
 import clip
-import cv2
 import numpy as np
 import torch
-import youtube_dl
 
-from multiprocessing import SimpleQueue, Process, set_start_method, shared_memory
+from multiprocessing import SimpleQueue, Process, shared_memory
 from torchvision.transforms import ToPILImage, Compose, ToTensor, Normalize
-from tqdm import tqdm
-
-from .batcher import get_dl
-from .reader import read_vids
 
 # from .reader_ffmpeg import read_vids
+from .batcher import get_dl
+from .reader import read_vids
 from .simplemapper import FrameMapper
 from .writer import write_embeddings
 

@@ -1,3 +1,4 @@
+"""save embeddings block using vid_inds dict"""
 import os
 
 import numpy as np

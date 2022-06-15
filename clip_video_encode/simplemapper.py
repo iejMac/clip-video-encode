@@ -1,3 +1,5 @@
+"""simplemapper - simple frame -> embedding mapper."""
+
 import torch
 
 

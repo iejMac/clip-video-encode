@@ -1,11 +1,7 @@
-import os
-
+"""same as reader.py but uses ffmpeg"""
 import cv2
 import ffmpeg
-import youtube_dl
 import numpy as np
-
-from torch.nn import Identity
 
 from multiprocessing import shared_memory
 from multiprocessing.pool import ThreadPool
@@ -17,7 +13,7 @@ POSTPROC_SHAPE = (224, 224, 3)
 
 
 def read_vids(vids, queue, comp_queue, chunk_size=1, take_every_nth=1):
-
+    """same as reader.py"""
     shms = []
 
     while len(vids) > 0:
@@ -57,11 +53,9 @@ def read_vids(vids, queue, comp_queue, chunk_size=1, take_every_nth=1):
 
         ind_dict = {}
         frame_count = 0
-        max_h, max_w = 0, 0
         for k, v in frams.items():
             ind_dict[k] = (frame_count, frame_count + len(v))
             frame_count += len(v)
-
 
         full_shape = (frame_count, 224, 224, 3)
 

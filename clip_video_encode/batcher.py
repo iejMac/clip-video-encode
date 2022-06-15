@@ -1,9 +1,10 @@
-import torch
-
+"""functions and classes used for batching frames for FrameMapper."""
 from torch.utils.data import Dataset, DataLoader
 
 
 class HelperDataset(Dataset):
+    """Helper dataset that preprocesses frames"""
+
     def __init__(
         self,
         imgs,
