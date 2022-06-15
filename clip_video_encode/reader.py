@@ -8,7 +8,7 @@ import numpy as np
 from torch.nn import Identity
 
 from multiprocessing import shared_memory
-from multiprocessing.pool import ThreadPool, Pool
+from multiprocessing.pool import ThreadPool
 
 
 QUALITY = "360p"
@@ -17,7 +17,7 @@ POSTPROC_SHAPE = (224, 224, 3)
 IMG_SIDE = 224
 
 
-def read_vids(vids, queue, comp_queue, chunk_size=1, take_every_nth=1):
+def read_vids(vids, queue, termination_queue=None, chunk_size=1, take_every_nth=1):
 
     shms = []
 
@@ -139,9 +139,10 @@ def read_vids(vids, queue, comp_queue, chunk_size=1, take_every_nth=1):
     queue.put("DONE_READING")
 
     # Wait for DONE_MAPPING
-    msg = comp_queue.get()
-    if msg != "DONE_MAPPING":
-        print("Error: Message wrong message received")
+    if termination_queue is not None:
+      msg = termination_queue.get()
+      if msg != "DONE_MAPPING":
+          print("Error: Message wrong message received")
 
     for shm in shms:
         shm.unlink()

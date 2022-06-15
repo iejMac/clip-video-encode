@@ -17,7 +17,8 @@ class HelperDataset(Dataset):
   def __getitem__(self, ind):
     return self.preprocess(self.imgs[ind])
 
-def ds_to_dl(ds, bs, n_work):
+def get_dl(imgs, preprocess, bs, n_work):
+  ds = HelperDataset(imgs, preprocess)
   return DataLoader(
     ds,
     batch_size = bs,

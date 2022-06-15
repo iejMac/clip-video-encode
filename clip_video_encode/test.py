@@ -14,7 +14,7 @@ from reader import read_vids
 from simplemapper import FrameMapper
 from writer import write_embeddings
 
-from batcher import HelperDataset, ds_to_dl
+from batcher import get_dl
 
 def _convert_image_to_rgb(image):
     return image.convert("RGB")
@@ -57,8 +57,7 @@ if __name__ == "__main__":
     shm = shared_memory.SharedMemory(name=info["shm_name"])
     block = np.ndarray((info["frame_count"], 224, 224, 3), dtype=np.uint8, buffer=shm.buf)
 
-    ds = HelperDataset(block, preproc)
-    dl = ds_to_dl(ds, BATCH_SIZE, N_DATASET_WORKERS)
+    dl = get_dl(block, preproc, BATCH_SIZE, N_DATASET_WORKERS)
 
     start_time = time.perf_counter()
 
