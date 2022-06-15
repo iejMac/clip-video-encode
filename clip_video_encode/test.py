@@ -1,93 +1,91 @@
-import os
-import time
-
-import glob
-import clip
-import torch
 import numpy as np
+import torch
+import time
+import glob
 
-from torchvision.transforms import Compose, ToPILImage
+import clip
 
-from reader import VideoReader
-from batcher import FrameBatcher
+from multiprocessing import SimpleQueue, Process, set_start_method, shared_memory
+from torchvision.transforms import ToPILImage, Compose, ToTensor, Normalize
+
+# from reader_ffmpeg import read_vids
+from reader import read_vids
+
 from simplemapper import FrameMapper
-from simplewriter import EmbeddingWriter
+from writer import write_embeddings
 
-BATCH_SIZE = 256
-NUM_WORKERS = 12
-CHUNK_SIZE = 100
+from batcher import HelperDataset, ds_to_dl
 
-VID_DIR = "../../wds_kinetics/cve_tests/big_test_vids/"
-vids = glob.glob(os.path.join(VID_DIR, "*.mp4"))
-vids = vids[:200]
-# vids = [f"test_data/vid{i + 1}.mp4" for i in range(10)]
+def _convert_image_to_rgb(image):
+    return image.convert("RGB")
+
+VID_DIR = "/home/iejmac/test_vids/*.mp4"
+EMB_DIR = "test_npy"
+
+if __name__ == "__main__":
+
+  vids = glob.glob(VID_DIR)
+  vids = vids[:400]
+
+  device = "cuda" if torch.cuda.is_available() else "cpu"
+  model, _ = clip.load("ViT-B/32", device=device)
+  preproc = Compose([ToTensor(), Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711))])
+
+  info_q = SimpleQueue()
+  complete_q = SimpleQueue() # TODO: SharedMemory hack, do properly
+
+  fm = FrameMapper(model)
+
+  N_VIDS = 100
+  BATCH_SIZE = 256
+  N_DATASET_WORKERS = 8
+  take_every_nth = 1
+
+  vr_proc = Process(target=read_vids, args=(vids, info_q, complete_q, N_VIDS, take_every_nth))
+
+  tot_start_time = time.perf_counter()
+  vr_proc.start()
+
+  TOT_FRAME_COUNT = 0
+  while True:
+    info = info_q.get()
+
+    if isinstance(info, str):
+        break
+
+    shm = shared_memory.SharedMemory(name=info["shm_name"])
+    block = np.ndarray((info["frame_count"], 224, 224, 3), dtype=np.uint8, buffer=shm.buf)
+
+    ds = HelperDataset(block, preproc)
+    dl = ds_to_dl(ds, BATCH_SIZE, N_DATASET_WORKERS)
+
+    start_time = time.perf_counter()
+
+    embeddings = []
+    for batch in dl:
+      with torch.no_grad():
+        emb = fm(batch.to("cuda"))
+        embeddings.append(emb)
+
+    embeddings = np.concatenate(embeddings)
+    frame_count = len(embeddings)
+
+    proc_time = time.perf_counter() - start_time
+    print(f"PROC FPS: {frame_count/proc_time}")
 
 
-reader_vids = vids # later this might be only a subset of vids and multiple readers
+    start_time = time.perf_counter()
+    write_embeddings(info["ind_dict"], embeddings, EMB_DIR)
+    write_time = time.perf_counter() - start_time
+    print(f"WRITE FPS: {frame_count/write_time}")
 
+    TOT_FRAME_COUNT += frame_count
+    shm.close()
 
-# Initialize model:
-device = "cuda" if torch.cuda.is_available() else "cpu"
-model, preprocess = clip.load("ViT-B/32", device=device)
-preprocess = Compose([ToPILImage(), preprocess])
+  complete_q.put("DONE_MAPPING") # TODO: SharedMemory hack, do properly
 
+  vr_proc.join()
 
-vr = VideoReader()
-fb = FrameBatcher(preprocess=preprocess)
-fm = FrameMapper(model=model)
-ew = EmbeddingWriter(destination_dir="test_npy")
-
-vid_start_time = time.perf_counter()
-
-TOT_FR_COUNT = 0
-
-while len(vids) > 0:
-  vid_chunk = vids[:CHUNK_SIZE]
-  vids = vids[CHUNK_SIZE:]
-
-  start_time = time.perf_counter()
-
-  frames = vr.read_vids(vid_chunk)
-  fr_count = 0
-
-  for dst, frs in frames.items():
-    fb.add_frames(frs, dst)
-    ew.init_video(dst, len(frs))
-    fr_count += len(frs)
-    TOT_FR_COUNT += len(frs)
-
-  read_time = time.perf_counter() - start_time
-  print(f"Read rate : {fr_count / read_time} [samples/s]")
-
-  start_time = time.perf_counter()
-  dl, vid_inds = fb.get_dataloader(BATCH_SIZE, NUM_WORKERS)
-
-  embs = []
-  mod_time = 0
-  ct = 0
-  for batch in dl:
-    ct += batch.shape[0]
-    mod_start = time.perf_counter()
-    embs.append(fm(batch.to(device)))
-    mod_time += time.perf_counter() - mod_start
-
-  preproc_model_time = time.perf_counter() - start_time
-  preproc_time = preproc_model_time - mod_time
-  print(f"Preprocess rate : {ct/preproc_time} [samples/s]")
-  print(f"Model rate : {ct/mod_time} [samples/s]")
-  print(f"Preproc + Model rate : { ct/preproc_model_time } [samples/s]")
-
-  embeddings = np.concatenate(embs)
-  # Separate by video
-  for v, i0, it in vid_inds:
-    vid_embeddings = ew.add_embeddings(v, embeddings[i0:it])
-
-  start_time = time.perf_counter()
-  flushed_count = ew.flush()
-  if flushed_count > 0:
-    flush_time = time.perf_counter() - start_time
-    print(f"Flushed rate {flushed_count / flush_time} [samples/s]")
-
-proc_vid_time = time.perf_counter() - vid_start_time
-print(f"TOTAL FRAME RATE: {TOT_FR_COUNT/proc_vid_time} [samples/s]")
-print(f"TOTAL TIME: {proc_vid_time}")
+  read_time = time.perf_counter() - tot_start_time
+  print(read_time)
+  print(f"FULL PROCESS FPS: {TOT_FRAME_COUNT/read_time}")

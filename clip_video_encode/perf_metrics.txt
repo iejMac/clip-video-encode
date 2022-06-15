@@ -1,3 +1,0 @@
-VideoReader performance on 71995 frames: 2738.5104504507976 FPS (152.13946946948874 % of min 1800 FPS)
-
-FrameBatcher performance on 60000 frames: 2005.7873287192103 FPS (1.1143262937328946x of min 1800 FPS)
