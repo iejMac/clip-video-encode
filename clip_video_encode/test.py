@@ -19,17 +19,18 @@ from batcher import HelperDataset, ds_to_dl
 def _convert_image_to_rgb(image):
     return image.convert("RGB")
 
-VID_DIR = "/home/iejmac/test_vids/*.mp4"
+VID_DIR = "test_data/*.mp4"
 EMB_DIR = "test_npy"
 
 if __name__ == "__main__":
 
   vids = glob.glob(VID_DIR)
-  vids = vids[:400]
+  vids = [vids[0]]
+  vids = ["test_data/animals.mp4"]
 
   device = "cuda" if torch.cuda.is_available() else "cpu"
   model, _ = clip.load("ViT-B/32", device=device)
-  preproc = Compose([ToTensor(), Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711))])
+  preproc = Compose([ToPILImage(), _convert_image_to_rgb, ToTensor(), Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711))])
 
   info_q = SimpleQueue()
   complete_q = SimpleQueue() # TODO: SharedMemory hack, do properly
@@ -64,7 +65,7 @@ if __name__ == "__main__":
     embeddings = []
     for batch in dl:
       with torch.no_grad():
-        emb = fm(batch.to("cuda"))
+        emb = fm(batch.to(device))
         embeddings.append(emb)
 
     embeddings = np.concatenate(embeddings)

@@ -88,7 +88,7 @@ def read_vids(vids, queue, comp_queue, chunk_size=1, take_every_nth=1):
                   mx = int((frame_shape[1] - IMG_SIDE)/2)
 
                   frame = frame[my:frame.shape[0]-my, mx:frame.shape[1]-mx]
-                  frame = frame[:IMG_SIDE, :IMG_SIDE][::-1] # safety crop + bgr -> rgb
+                  frame = frame[:IMG_SIDE, :IMG_SIDE]
 
                   video_frames.append(frame)
 
