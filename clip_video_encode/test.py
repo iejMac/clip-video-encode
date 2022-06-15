@@ -20,13 +20,13 @@ def _convert_image_to_rgb(image):
     return image.convert("RGB")
 
 VID_DIR = "test_data/*.mp4"
+
 EMB_DIR = "test_npy"
 
 if __name__ == "__main__":
 
   vids = glob.glob(VID_DIR)
-  vids = [vids[0]]
-  vids = ["test_data/animals.mp4"]
+  vids = vids[:1]
 
   device = "cuda" if torch.cuda.is_available() else "cpu"
   model, _ = clip.load("ViT-B/32", device=device)
@@ -40,7 +40,7 @@ if __name__ == "__main__":
   N_VIDS = 100
   BATCH_SIZE = 256
   N_DATASET_WORKERS = 8
-  take_every_nth = 1
+  take_every_nth = 25
 
   vr_proc = Process(target=read_vids, args=(vids, info_q, complete_q, N_VIDS, take_every_nth))
 
