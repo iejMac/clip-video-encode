@@ -26,7 +26,7 @@ def _convert_image_to_rgb(image):
     return image.convert("RGB")
 
 
-def clip_video_encode(src, dest=None, take_every_nth=1):
+def clip_video_encode(src, dest="", take_every_nth=1):
     """
     Encode frames using CLIP image encoder
 
