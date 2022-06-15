@@ -247,6 +247,7 @@ ignore-long-lines=(?x)
 
                              extension-pkg-whitelist=_jsonnet
 
+
                              [CLASSES]
 
                              # List of interface methods to ignore, separated by a comma. This is used for

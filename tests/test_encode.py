@@ -23,5 +23,5 @@ def test_encode():
                 ld = vid.split("=")[-1] + ".npy"
 
             embeddings = np.load(os.path.join(tmpdir, ld))
-            assert embeddings.shape[0] == FRAME_COUNTS[vid] // 2  # frame count
+            assert embeddings.shape[0] == FRAME_COUNTS[vid]//2  # frame count
             assert embeddings.shape[1] == 512  # embed dim
