@@ -78,7 +78,7 @@ def read_vids(vids, queue, termination_queue=None, chunk_size=1, take_every_nth=
                             ratio = cur_shape[sm_ind] / IMG_SIDE
                             n_shape = cur_shape
                             n_shape[sm_ind] = IMG_SIDE
-                            n_shape[bg_ind] = max(int(n_shape[bg_ind] / ratio), IMG_SIDE) # safety for rounding errors
+                            n_shape[bg_ind] = max(int(n_shape[bg_ind] / ratio), IMG_SIDE)  # safety for rounding errors
                             frame_shape = tuple(n_shape)
 
                         # Resize:
