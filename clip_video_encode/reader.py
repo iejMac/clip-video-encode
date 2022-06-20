@@ -113,7 +113,8 @@ def read_vids(vids, queue, termination_queue=None, chunk_size=1, take_every_nth=
         in_arr = np.ndarray(full_shape, dtype=np.uint8, buffer=shm.buf)
         for k, v in frams.items():
             i0, it = ind_dict[k]
-            in_arr[i0:it] = v
+            if it > i0:
+                in_arr[i0:it] = v
 
         info = {
             "ind_dict": ind_dict,
