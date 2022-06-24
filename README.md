@@ -59,6 +59,9 @@ take_every_5 = 5
 clip_video_encode(VIDS, EMBEDDING_DIR, take_every_5)
 ```
 
+## Who is using clip-video-encode?
+* [CLIP-Kinetics700](https://huggingface.co/datasets/iejMac/CLIP-Kinetics700) - The Kinetics700 dataset (700GB) can be compressed to ~8GB using clip-video-encode at 1 FPS
+
 ## For development
 
 Either locally, or in [gitpod](https://gitpod.io/#https://github.com/rom1504/clip-video-encode) (do `export PIP_USER=false` there)
