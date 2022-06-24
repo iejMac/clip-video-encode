@@ -29,7 +29,7 @@ jobs:
       if: ${{ steps.regex-match.outputs.match != '' }}
       uses: softprops/action-gh-release@v1
       with:
-        files: clip-video-encode.pex
+        files: clip_video_encode.pex
         tag_name: ${{ steps.regex-match.outputs.group1 }}
     - name: Build and publish
       if: ${{ steps.regex-match.outputs.match != '' }}
