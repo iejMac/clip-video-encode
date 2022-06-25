@@ -21,28 +21,27 @@ We us the [webdataset](https://github.com/webdataset/webdataset) format therefor
 
 
 ```
-......
-	video-embedding-dataset
-   ├── train
-	 │   ├── ds_00000.tar
-	 |   |     ├── name0.npy
-	 |   |     ├── name0.cap
-	 |   |     ├── name0.json
-	 |   |     ├── name1.npy
-	 |   |     ├── name1.cap
-	 |   |     ├── name1.json
-	 |   |     └── ...
-	 │   ├── ds_00001.tar
-	 |   |     ├── name0.npy
-	 |   |     ├── name0.cap
-	 |   |     ├── name0.json
-	 |   |     └── ...
-	 │   └── ...
-	 │
-   ├── val
-	 │   ...
-   ├── test
-	 │   ...
+video-embedding-dataset
+ ├── train
+ │   ├── ds_00000.tar
+ |   |     ├── name0.npy
+ |   |     ├── name0.cap
+ |   |     ├── name0.json
+ |   |     ├── name1.npy
+ |   |     ├── name1.cap
+ |   |     ├── name1.json
+ |   |     └── ...
+ │   ├── ds_00001.tar
+ |   |     ├── name0.npy
+ |   |     ├── name0.cap
+ |   |     ├── name0.json
+ |   |     └── ...
+ │   └── ...
+ │
+ ├── val
+ │   ...
+ ├── test
+ │   ...
 ```
 
 ## Example of preparing dataset:
