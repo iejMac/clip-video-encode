@@ -6,8 +6,15 @@
 Easily compute clip embeddings from video frames (mp4 or youtube links)
 
 ## Install
+
+Using pip:
 ```
 pip install clip-video-encode
+```
+
+Or build from source:
+```
+python setup.py install
 ```
 
 ## Usage 
