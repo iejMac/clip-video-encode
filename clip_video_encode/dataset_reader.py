@@ -97,10 +97,10 @@ class EmbeddingWebDatasetReader:
         standard_seq_len,
         batch_size,
         num_prepro_workers,
-        embedding_transform=lambda emb: emb,
         to_tensor: True,
         enable_text=True,
         enable_meta=False,
+        embedding_transform=lambda emb: emb,
     ):
         self.batch_size = batch_size
         dataset = create_embeddingwebdataset(
