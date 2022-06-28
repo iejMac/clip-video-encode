@@ -13,6 +13,7 @@ import webdataset as wds
 
 from torch.utils.data import DataLoader
 
+
 def standardize_embedding_shape(emb, seq_len):
     if len(emb) > seq_len:
         print(f"Warning: Raw embedding is longer than standard sequence length ({len(emb)} > {seq_len})")
@@ -21,6 +22,7 @@ def standardize_embedding_shape(emb, seq_len):
     pad = np.zeros((seq_len - len(emb), emb.shape[1]), dtype=emb.dtype)
     padded_emb = np.concatenate([emb, pad])
     return padded_emb
+
 
 def create_embeddingwebdataset(
     urls,
@@ -70,12 +72,12 @@ def create_embeddingwebdataset(
             output["meta"] = meta
         return output
 
-
     transformed_dataset = dataset.map(preprocess_dataset, handler=wds.handlers.warn_and_continue)
     return transformed_dataset
 
 
 def dataset_to_dataloader(dataset, batch_size, num_prepro_workers):
+    """converts WebDataset to PyTorch DataLoader."""
 
     dl = DataLoader(
         dataset,
@@ -91,13 +93,14 @@ def dataset_to_dataloader(dataset, batch_size, num_prepro_workers):
 
 class EmbeddingWebDatasetReader:
     """WebDataset reader for Embedding Datasets"""
+
     def __init__(
         self,
         urls,
         standard_seq_len,
         batch_size,
         num_prepro_workers,
-        to_tensor: True,
+        to_tensor=True,
         enable_text=True,
         enable_meta=False,
         embedding_transform=lambda emb: emb,
