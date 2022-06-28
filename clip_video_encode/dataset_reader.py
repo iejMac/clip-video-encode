@@ -24,6 +24,7 @@ def standardize_embedding_shape(emb, seq_len):
 
 def create_embeddingwebdataset(
     urls,
+    embedding_transform=lambda emb: emb,
     standard_seq_len=-1,
     to_tensor=True,
     enable_text=True,
@@ -56,7 +57,7 @@ def create_embeddingwebdataset(
         if to_tensor:
             emb = torch.from_numpy(emb)
 
-        output["embeddings"] = emb
+        output["embeddings"] = embedding_transform(emb)
 
         if enable_text:
             text_data = item["cap"]
@@ -92,17 +93,19 @@ class EmbeddingWebDatasetReader:
     """WebDataset reader for Embedding Datasets"""
     def __init__(
         self,
-        root,
+        urls,
         standard_seq_len,
         batch_size,
         num_prepro_workers,
+        embedding_transform=lambda emb: emb,
         to_tensor: True,
         enable_text=True,
         enable_meta=False,
     ):
         self.batch_size = batch_size
         dataset = create_embeddingwebdataset(
-            root,
+            urls,
+            embedding_transform,
             standard_seq_len,
             to_tensor,
             enable_text,
