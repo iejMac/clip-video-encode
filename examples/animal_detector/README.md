@@ -48,4 +48,4 @@ plt.plot(xs, ps)
 plt.show()
 ```
 
-![Initial probability of bear](examples/animal_detector/assets/initial_prob_bear.png)
+![Initial probability of bear](assets/initial_prob_bear.png)
