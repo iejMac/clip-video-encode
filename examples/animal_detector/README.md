@@ -67,7 +67,7 @@ for i in range(n_filter_steps):
 ```
 
 <p align="center">
-  <img src="assets/filtered_prob_bear.png" height="500"/>
+  <img src="assets/filtering.gif" height="500"/>
 </p>
 
 
