@@ -76,3 +76,5 @@ for i in range(n_filter_steps):
 <p align="center">
   <img src="assets/bear.png" height="500"/>
 </p>
+
+## Feel free to play around with [thing_detector.py](https://github.com/iejMac/clip-video-encode/tree/main/examples/thing_detector/thing_detector.py). It has all the code from this demo compiled together and works with the example video embeddings.
