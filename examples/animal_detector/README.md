@@ -47,5 +47,6 @@ xs = [(i*T)/len(ps) for i in range(len(ps))]
 plt.plot(xs, ps)
 plt.show()
 ```
-
-<img src="assets/initial_prob_bear.png" height="500" class="center"/>
+<p align="center">
+  <img src="assets/initial_prob_bear.png" height="500"/>
+</p>
