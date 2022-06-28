@@ -50,3 +50,25 @@ plt.show()
 <p align="center">
   <img src="assets/initial_prob_bear.png" height="500"/>
 </p>
+
+## Looks noisy, why don't we filter the signal:
+```python
+def conv_filter(probs, width=10):
+    pad_ps = (width // 2) * [0.0] + probs + (width // 2) * [0.0]
+    ret_ps = []
+    for i in range(len(probs)):
+        ret_ps.append(np.mean(probs[i : i + width]))
+    return ret_ps
+
+# Filter probs:
+n_filter_steps = 20
+for i in range(n_filter_steps):
+    ps = conv_filter(ps, 20)
+```
+
+<p align="center">
+  <img src="assets/filtered_prob_bear.png" height="500"/>
+</p>
+
+
+
