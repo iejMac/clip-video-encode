@@ -57,10 +57,10 @@ plt.show()
 ```python
 def conv_filter(probs, width=10):
     padded_probs = np.pad(probs, width//2)
-    prob_cp = np.zeros(probs.shape)
+    prob_filt = np.zeros(probs.shape)
     for i in range(len(probs)):
-      prob_cp[i] = np.mean(padded_probs[i:i+width])
-    return prob_cp
+      prob_filt[i] = np.mean(padded_probs[i:i+width])
+    return prob_filt
 
 # Filter probs:
 n_filter_steps = 20

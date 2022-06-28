@@ -1,3 +1,5 @@
+"""thing detector script using clip-video-encode."""
+
 import clip
 import numpy as np
 import sys
@@ -8,18 +10,17 @@ from matplotlib import pyplot as plt
 
 def conv_filter(probs, width=10):
     padded_probs = np.pad(probs, width//2)
-    prob_cp = np.zeros(probs.shape)
+    prob_filt = np.zeros(probs.shape)
     for i in range(len(probs)):
-      prob_cp[i] = np.mean(padded_probs[i:i+width])
-
-    return prob_cp
+      prob_filt[i] = np.mean(padded_probs[i:i+width])
+    return prob_filt
       
 
-VIDEO = "pCUtPE4cAsk.npy"
+EMBEDDINGS = "pCUtPE4cAsk.npy"
 device = "cuda" if torch.cuda.is_available() else "cpu"
-video_embs = torch.Tensor(np.load(VIDEO)).to(device)
+video_embs = torch.Tensor(np.load(EMBEDDINGS)).to(device)
 
-chosen_thing = "grizly bear"
+chosen_thing = "bear"
 labels = [f"a photo of a {chosen_thing}", "a photo of something"]
 tokenized_labels = clip.tokenize(labels).to(device)
 
@@ -41,27 +42,14 @@ T = 12.95 # length of video in minutes
 ps = probs[:, 0]
 xs = [(i*T)/len(ps) for i in range(len(ps))]
 
+# Unfiltered probs
 plt.plot(xs, ps)
 plt.show()
-
-plt.figure().clear()
 
 # Filter probs:
 n_filter_steps = 20
 for i in range(n_filter_steps):
-    plt.plot(xs, ps)
-    plt.savefig(f"filter_steps/filt{i}")
-    plt.figure().clear()
     ps = conv_filter(ps, 20)
-
-
-plt.plot(xs, ps)
-plt.savefig(f"filter_steps/filt20")
-plt.figure().clear()
-
-# Interpret sorted signal:
-# threshold = 0.7
-# ps = [1.0 if p > threshold else 0.0 for p in ps]
 
 plt.plot(xs, ps)
 plt.show()
