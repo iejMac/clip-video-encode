@@ -48,4 +48,4 @@ plt.plot(xs, ps)
 plt.show()
 ```
 
-<img src="assets/initial_prob_bear.png" height="500" />
+<img src="assets/initial_prob_bear.png" height="500" class="center"/>
