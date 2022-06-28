@@ -1,4 +1,4 @@
-# Animal detector using clip-video-encode 🔍🦁
+# Animal detector using clip-video-encode 🔍🐻
 
 ## Install:
 ```
@@ -70,5 +70,12 @@ for i in range(n_filter_steps):
   <img src="assets/filtering.gif" height="500"/>
 </p>
 
+## Finally, let's apply a threshold and check if it worked!
+```python
+threshold = 0.7
+ps = [1.0 if p > threshold else 0.0 for p in ps]
+```
 
-
+<p align="left">
+  <img src="assets/threshold_bear_prob.png" height="500"/>
+</p>
