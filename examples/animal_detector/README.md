@@ -48,4 +48,4 @@ plt.plot(xs, ps)
 plt.show()
 ```
 
-![Initial probability of bear](assets/initial_prob_bear.png =300x)
+<img src="assets/initial_prob_bear.png" width="200" height="200" />
