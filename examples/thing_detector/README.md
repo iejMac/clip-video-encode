@@ -40,7 +40,7 @@ with torch.no_grad():
     probs = logits_per_frame.softmax(dim=-1).cpu().numpy()
 ```
 
-## Let's look at a graph of the probability that the animal is present in the frame:
+## Let's look at a graph of the probability that the thing is present in the frame:
 ```python
 T = 12.95 # length of video in minutes
 ps = probs[:, 0]
