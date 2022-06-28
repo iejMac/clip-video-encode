@@ -72,12 +72,8 @@ for i in range(n_filter_steps):
   <img src="assets/filtering.gif" height="500"/>
 </p>
 
-## Finally, let's apply a threshold and check if it worked!
-```python
-threshold = 0.7
-ps = [1.0 if p > threshold else 0.0 for p in ps]
-```
+## It looks like there might be a bear at around 2:30-3:00, let's check!
 
-<p align="left">
-  <img src="assets/threshold_bear_prob.png" height="500"/>
+<p align="center">
+  <img src="assets/bear.png" height="500"/>
 </p>
