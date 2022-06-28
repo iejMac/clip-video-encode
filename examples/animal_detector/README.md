@@ -1,4 +1,6 @@
-# Animal detector using clip-video-encode 🔍🐻
+# Thing detector using clip-video-encode 🔍
+
+You can use clip-video-encode to look for things in videos
 
 ## Install:
 ```
