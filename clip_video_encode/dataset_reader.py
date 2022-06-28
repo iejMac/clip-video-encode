@@ -4,8 +4,6 @@ utils for processing datasets of format described in https://github.com/iejMac/c
 used https://github.com/rom1504/laion-prepro/blob/main/laion5B/usage_guide/dataloader_pytorch.py as template
 """
 
-#TODO: update to new format
-
 import io
 
 import clip
@@ -16,7 +14,6 @@ import webdataset as wds
 from torch.utils.data import DataLoader
 
 def standardize_embedding_shape(emb, seq_len):
-    # TODO: not sure if we should crop quietely or maybe warn about increasing seq_len
     if len(emb) > seq_len:
         print(f"Warning: Raw embedding is longer than standard sequence length ({len(emb)} > {seq_len})")
         emb = emb[:seq_len]
@@ -62,7 +59,6 @@ def create_embeddingwebdataset(
         output["embeddings"] = emb
 
         if enable_text:
-            #TODO maybe we should also tokenize here like in template
             text_data = item["cap"]
             text = text_data.decode("utf-8")
             output["text"] = text
