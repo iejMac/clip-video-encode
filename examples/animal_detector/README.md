@@ -18,7 +18,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 video_embs = torch.Tensor(np.load(EMBEDDINGS)).to(device)
 
 chosen_animal = "bear"
-labels = [f"a photo of a {choose_animal}", "a photo of an animal"]
+labels = [f"a photo of a {chosen_animal}", "a photo of an animal"]
 tokenized_labels = clip.tokenize(labels).to(device)
 ```
 
@@ -38,3 +38,14 @@ with torch.no_grad():
     probs = logits_per_frame.softmax(dim=-1).cpu().numpy()
 ```
 
+## Let's look at a graph of the probability that the animal is present in the frame:
+```python
+T = 13 # length of video in minutes
+ps = probs[:, 0].tolist()
+xs = [(i*T)/len(ps) for i in range(len(ps))]
+
+plt.plot(xs, ps)
+plt.show()
+```
+
+![Initial probability of bear](examples/animal_detector/assets/initial_prob_bear.png)
