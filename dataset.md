@@ -14,7 +14,7 @@ https://docs.google.com/document/d/12zYnjZabR2e17vPO2XpctIf1qUQeEX7kYC8GdDqWM-k/
 
 ## Processed dataset
 
-A processed dataset is the common format we use before combining all the files into a Embedding WebDataset using our [create_shards.py]() script. This format is a directory with 3 subdirectories for each of the train/val/test splits. Inside each subdirectory there should be n triples all with the same name but with different extensions:
+A processed dataset is the common format we use before combining all the files into a Embedding WebDataset using our [create_shards.py]() script. This format is a directory with 3 subdirectories for each of the train/val/test splits. Inside each subdirectory there should be n triples with unique names:
 
 * numpy files with the embeddings of the frames (generated using clip-video-encode) of shape (frame_count, embed_dim)
 * txt files with the caption for that video
