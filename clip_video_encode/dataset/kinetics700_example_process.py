@@ -30,13 +30,13 @@ for split in SPLITS:
             "end_time": end_t,
         }
 
-        fname_prefix = os.path.join(PROCESSED_DIR, split, "vid_%09d" % sample_id)
+        fname_prefix = os.path.join(PROCESSED_DIR, split, f"vid_{sample_id:09}")
 
-        with open(fname_prefix + ".txt", "w") as f:
-            f.write(cap) # for Kinetics700 caption is label
-        with open(fname_prefix + ".json", "w") as f:
+        with open(fname_prefix + ".txt", "w", encoding="utf-8") as f:
+            f.write(cap)  # for Kinetics700 caption is label
+        with open(fname_prefix + ".json", "w", encoding="utf-8") as f:
             json.dump(meta, f)
 
         shutil.copyfile(npy, fname_prefix + ".npy")
 
-        sample_id += 1 # UNIQUE ID FOR EACH VIDEO
+        sample_id += 1  # UNIQUE ID FOR EACH VIDEO
