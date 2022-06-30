@@ -72,10 +72,10 @@ video-embedding-dataset
 
 ## Example of preparing dataset:
 
-Make this easier with clip-video-encode i.e.:
-1. Raw DS
-2. split up videos into train/val/test
-3. clip-video-encode does the rest
+1. Download Raw DS - [Kinetics700](https://github.com/cvdfoundation/kinetics-dataset)
+2. Encode mp4 files into numpy embeddings with clip-video-encode
+3. Use [preprocessing script](https://github.com/iejMac/clip-video-encode/tree/main/clip_video_encode/dataset/kinetics700_example_process.py) to get dataset into preprocessed form
+3. Run [shard creating script]().
 
 ## Example of prepared Embedding WebDatasets:
 Examples: 
