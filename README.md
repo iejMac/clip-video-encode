@@ -6,8 +6,15 @@
 Easily compute clip embeddings from video frames (mp4 or youtube links)
 
 ## Install
+
+Using pip:
 ```
 pip install clip-video-encode
+```
+
+Or build from source:
+```
+python setup.py install
 ```
 
 ## Usage 
@@ -61,6 +68,10 @@ clip_video_encode(VIDS, EMBEDDING_DIR, take_every_5)
 
 ## Who is using clip-video-encode?
 * [CLIP-Kinetics700](https://huggingface.co/datasets/iejMac/CLIP-Kinetics700) - The Kinetics700 dataset (700GB) can be compressed to ~8GB using clip-video-encode at 1 FPS
+
+## Examples
+Check out some cool clip-video-encode examples:
+* [Thing detector](https://github.com/iejMac/clip-video-encode/tree/main/examples/thing_detector) - Look for things in videos using clip-video-encode generated embeddings.
 
 ## For development
 
