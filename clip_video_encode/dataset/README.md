@@ -75,7 +75,7 @@ video-embedding-dataset
 1. Download Raw DS - [Kinetics700](https://github.com/cvdfoundation/kinetics-dataset)
 2. Encode mp4 files into numpy embeddings with clip-video-encode
 3. Use [preprocessing script](https://github.com/iejMac/clip-video-encode/tree/main/clip_video_encode/dataset/kinetics700_example_process.py) to get dataset into preprocessed form
-3. Run [shard creating script]().
+3. Run [shard creating script]() to create final Embedding WebDataset format.
 
 ## Example of prepared Embedding WebDatasets:
 Examples: 
