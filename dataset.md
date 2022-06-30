@@ -41,7 +41,7 @@ processed_dataset
 
 ## Embedding WebDataset 
 
-We us the [webdataset](https://github.com/webdataset/webdataset) format therefore the final processed dataset should be in the form of a list of tar files with unique ID's and a splits.csv file describing which tar files belong to which splits. Each tar file should have 10000 triples (final tar in each will might have <10000) with the same name and ID:
+We us the [webdataset](https://github.com/webdataset/webdataset) format therefore the final processed dataset should be in the form of a list of tar files with unique ID's and a splits.csv file describing which tar files belong to which splits. Each tar file should have 10000 triples (final tar in each split might have <10000) with the same name and ID:
 
 * numpy array (.npy) of shape (frame_count, embed_dim) where embed_dim is 512 for now
 * text caption (.txt) that describes the video
