@@ -92,7 +92,6 @@ with wds.ShardWriter(pattern, maxsize=int(args.maxsize), maxcount=int(args.maxco
             with open(text_files[keys[i]], "rb", encoding="utf-8") as txtstream:
                 text = txtstream.read()
 
-            # ds_key = str(text_files[keys[i]]).split("_")[-1]
             ds_key = str(text_files[keys[i]]).rsplit("_", maxsplit=1)[-1]
 
             sample = {"__key__": ds_key, "npy": embeddings, "cap": text}
