@@ -98,3 +98,4 @@ with wds.ShardWriter(pattern, maxsize=int(args.maxsize), maxcount=int(args.maxco
             if args.json and keys[i] in json_keys:
                 sample["json"] = json_dicts[keys[i]]
             sink.write(sample)
+        sink.next_stream()
