@@ -57,7 +57,7 @@ def create_embeddingwebdataset(
 
         if standard_seq_len != -1:
             emb, zero_mask = standardize_embedding_shape(emb, standard_seq_len)
-            output["mask"] = zero_mask
+            output["zero_mask"] = zero_mask
         if to_tensor:
             emb = torch.from_numpy(emb)
 
