@@ -20,7 +20,7 @@ def standardize_embedding_shape(emb, seq_len):
         emb = emb[:seq_len]
 
     pad = np.zeros((seq_len - len(emb), emb.shape[1]), dtype=emb.dtype)
-    zero_mask = np.concatenate([np.ones(len(emb)), np.zeros(len(pad)]))
+    zero_mask = np.concatenate([np.ones(len(emb)), np.zeros(len(pad))])
     padded_emb = np.concatenate([emb, pad])
     return padded_emb, zero_mask
 
