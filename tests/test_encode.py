@@ -8,7 +8,7 @@ from clip_video_encode import clip_video_encode
 FRAME_COUNTS = {
     "vid1.mp4": 56,
     "vid2.mp4": 134,
-    "https://www.youtube.com/watch?v=EKtBQbK4IX0": 78,
+    "https://www.youtube.com/watch?v=a8DM-tD9w2I": 20,
 }
 
 
