@@ -9,12 +9,12 @@ from matplotlib import pyplot as plt
 
 
 def conv_filter(probs, width=10):
-    padded_probs = np.pad(probs, width//2)
+    padded_probs = np.pad(probs, width // 2)
     prob_filt = np.zeros(probs.shape)
     for i in range(len(probs)):
-      prob_filt[i] = np.mean(padded_probs[i:i+width])
+        prob_filt[i] = np.mean(padded_probs[i : i + width])
     return prob_filt
-      
+
 
 EMBEDDINGS = "pCUtPE4cAsk.npy"
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -38,9 +38,9 @@ with torch.no_grad():
     probs = logits_per_frame.softmax(dim=-1).cpu().numpy()
 
 
-T = 12.95 # length of video in minutes
+T = 12.95  # length of video in minutes
 ps = probs[:, 0]
-xs = [(i*T)/len(ps) for i in range(len(ps))]
+xs = [(i * T) / len(ps) for i in range(len(ps))]
 
 # Unfiltered probs
 plt.plot(xs, ps)

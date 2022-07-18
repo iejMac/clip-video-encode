@@ -20,8 +20,9 @@ def standardize_embedding_shape(emb, seq_len):
         emb = emb[:seq_len]
 
     pad = np.zeros((seq_len - len(emb), emb.shape[1]), dtype=emb.dtype)
+    zero_mask = np.concatenate([np.ones(len(emb)), np.zeros(len(pad))])
     padded_emb = np.concatenate([emb, pad])
-    return padded_emb
+    return padded_emb, zero_mask
 
 
 def create_embeddingwebdataset(
@@ -55,7 +56,8 @@ def create_embeddingwebdataset(
         emb = np.lib.format.read_array(stream)
 
         if standard_seq_len != -1:
-            emb = standardize_embedding_shape(emb, standard_seq_len)
+            emb, zero_mask = standardize_embedding_shape(emb, standard_seq_len)
+            output["zero_mask"] = zero_mask
         if to_tensor:
             emb = torch.from_numpy(emb)
 
