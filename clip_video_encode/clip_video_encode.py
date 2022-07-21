@@ -7,18 +7,16 @@ import torch
 
 from multiprocessing import SimpleQueue, Process, shared_memory
 from torchvision.transforms import ToPILImage, Compose, ToTensor, Normalize
+from video2numpy.frame_reader import FrameReader
 
-# from .reader_ffmpeg import read_vids
 from .batcher import get_dl
-from .reader import read_vids
 from .simplemapper import FrameMapper
 from .writer import write_embeddings
 
 
 BATCH_SIZE = 256
-VID_CHUNK_SIZE = 100
+IMG_SIZE = 224
 EMB_DIM = 512
-QUALITY = "360p"
 N_DATASET_WORKERS = 8
 
 
@@ -66,22 +64,11 @@ def clip_video_encode(src, dest="", take_every_nth=1):
         ]
     )
 
-    info_q = SimpleQueue()
-    complete_q = SimpleQueue()  # TODO: SharedMemory hack, do properly
-
     fm = FrameMapper(model)
-    vr_proc = Process(target=read_vids, args=(fnames, info_q, complete_q, VID_CHUNK_SIZE, take_every_nth))
-    vr_proc.start()
+    fr = FrameReader(fnames, take_every_nth, IMG_SIZE, workers=N_DATASET_WORKERS)
+    fr.start_reading()
 
-    while True:
-        info = info_q.get()
-        if isinstance(info, str):
-            break
-
-        shm = shared_memory.SharedMemory(name=info["shm_name"])
-        block = np.ndarray((info["frame_count"], 224, 224, 3), dtype=np.uint8, buffer=shm.buf)
-        dl = get_dl(block, preprocess, BATCH_SIZE, N_DATASET_WORKERS)
-
+    for vid_block, info in fr:
         embeddings = []
         for batch in dl:
             with torch.no_grad():
