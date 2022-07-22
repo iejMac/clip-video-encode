@@ -6,12 +6,11 @@ import clip
 import numpy as np
 import torch
 
-from multiprocessing import SimpleQueue, Process, shared_memory
 from torchvision.transforms import ToPILImage, Compose, ToTensor, Normalize
 from video2numpy.frame_reader import FrameReader
 
 from .simplemapper import FrameMapper
-from .writer import write_embeddings
+# from .writer import write_embeddings
 from .utils import block2dl
 
 
