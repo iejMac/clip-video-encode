@@ -1,4 +1,5 @@
 """encode video with CLIP"""
+import os
 import sys
 
 import clip
@@ -9,15 +10,15 @@ from multiprocessing import SimpleQueue, Process, shared_memory
 from torchvision.transforms import ToPILImage, Compose, ToTensor, Normalize
 from video2numpy.frame_reader import FrameReader
 
-from .batcher import get_dl
 from .simplemapper import FrameMapper
 from .writer import write_embeddings
+from .utils import block2dl
 
 
 BATCH_SIZE = 256
 IMG_SIZE = 224
 EMB_DIM = 512
-N_DATASET_WORKERS = 8
+N_DATASET_WORKERS = 6
 
 
 def _convert_image_to_rgb(image):
@@ -69,6 +70,8 @@ def clip_video_encode(src, dest="", take_every_nth=1):
     fr.start_reading()
 
     for vid_block, info in fr:
+        dl = block2dl(vid_block, preprocess, BATCH_SIZE, N_DATASET_WORKERS)
+
         embeddings = []
         for batch in dl:
             with torch.no_grad():
@@ -76,12 +79,8 @@ def clip_video_encode(src, dest="", take_every_nth=1):
                 embeddings.append(emb)
 
         embeddings = np.concatenate(embeddings)
-        write_embeddings(info["ind_dict"], embeddings, dest)
-        shm.close()
-
-    complete_q.put("DONE_MAPPING")  # TODO: SharedMemory hack, do properly
-    vr_proc.join()
-
+        save_pth = os.path.join(dest, info["dst_name"])
+        np.save(save_pth, embeddings)
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
