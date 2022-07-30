@@ -12,7 +12,7 @@ THREAD_COUNT = 12
 POSTPROC_SHAPE = (224, 224, 3)
 IMG_SIDE = 224
 
-
+# Yuchen TODO : Add audio extraction option to this function
 def read_vids(vids, queue, termination_queue=None, chunk_size=1, take_every_nth=1):
     """
     Reads list of videos, saves frames to /dev/shm, and passes reading info through
