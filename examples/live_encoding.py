@@ -14,11 +14,11 @@ def _convert_image_to_rgb(image):
     return image.convert("RGB")
 
 
-DATA_DIR = "nps" # load up DATA_DIR with numpy video frame arrays (https://github.com/iejMac/video2numpy)
-                 # you can do this live while LiveNumpyEncoder is functioning as long as you pass it
-                 # the entire set of fnames you expect encoded.
+DATA_DIR = "nps"  # load up DATA_DIR with numpy video frame arrays (https://github.com/iejMac/video2numpy)
+# you can do this live while LiveNumpyEncoder is functioning as long as you pass it
+# the entire set of fnames you expect encoded.
 
-EMB_DIR = "embs" # save embeddings here
+EMB_DIR = "embs"  # save embeddings here
 
 VIDS = os.listdir(DATA_DIR)
 
