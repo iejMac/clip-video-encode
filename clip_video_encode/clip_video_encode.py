@@ -1,7 +1,6 @@
 """encode video with CLIP"""
 import os
 import sys
-import time
 
 import clip
 import numpy as np
@@ -68,7 +67,6 @@ def clip_video_encode(src, dest="", take_every_nth=1):
 
     fm = FrameMapper(model)
     fr = FrameReader(fnames, take_every_nth, IMG_SIZE, workers=N_DATASET_WORKERS)
-    t0 = time.perf_counter()
     fr.start_reading()
 
     ct = 0
@@ -86,9 +84,6 @@ def clip_video_encode(src, dest="", take_every_nth=1):
         ct += embeddings.shape[0]
         save_pth = os.path.join(dest, info["dst_name"])
         np.save(save_pth, embeddings)
-
-    tf = time.perf_counter()
-    print(f"FPS: {ct / (tf - t0)}")
 
 
 if __name__ == "__main__":
