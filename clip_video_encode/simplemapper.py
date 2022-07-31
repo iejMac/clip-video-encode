@@ -4,8 +4,9 @@ import torch
 
 
 class FrameMapper:
-    def __init__(self, model):
+    def __init__(self, model, device):
         self.model = model
+        self.device = device
 
     def __call__(self, batch):
         with torch.no_grad():

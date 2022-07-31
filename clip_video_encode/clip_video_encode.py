@@ -65,11 +65,9 @@ def clip_video_encode(src, dest="", take_every_nth=1):
         ]
     )
 
-    fm = FrameMapper(model)
+    fm = FrameMapper(model, device)
     fr = FrameReader(fnames, take_every_nth, IMG_SIZE, workers=N_DATASET_WORKERS)
     fr.start_reading()
-
-    ct = 0
 
     for vid_block, info in fr:
         dl = block2dl(vid_block, preprocess, BATCH_SIZE, 0)
@@ -81,7 +79,6 @@ def clip_video_encode(src, dest="", take_every_nth=1):
                 embeddings.append(emb)
 
         embeddings = np.concatenate(embeddings)
-        ct += embeddings.shape[0]
         save_pth = os.path.join(dest, info["dst_name"])
         np.save(save_pth, embeddings)
 
