@@ -10,8 +10,8 @@ from .utils import block2dl
 N_DATASET_WORKERS = 6
 BATCH_SIZE = 256
 
-# TODO: renmae to LiveNumpyEncoder?
-class NumpyEncoder:
+
+class LiveNumpyEncoder:
     """class that watches directory for set of numpy arrays of videos to encode using CLIP."""
     def __init__(self, data_dir, dest_dir, vids, mapper, preprocess):
         """
