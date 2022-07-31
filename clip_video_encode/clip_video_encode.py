@@ -11,6 +11,7 @@ from torchvision.transforms import ToPILImage, Compose, ToTensor, Normalize
 from video2numpy.frame_reader import FrameReader
 
 from .simplemapper import FrameMapper
+
 # from .writer import write_embeddings
 from .utils import block2dl
 
@@ -88,6 +89,7 @@ def clip_video_encode(src, dest="", take_every_nth=1):
 
     tf = time.perf_counter()
     print(f"FPS: {ct / (tf - t0)}")
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:

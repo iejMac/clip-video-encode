@@ -46,7 +46,8 @@ def create_embeddingwebdataset(
 
     dataset = wds.WebDataset(urls)
     # TODO: different tokeinzers??
-    tokenizer = lambda text: clip.tokenize([text], truncate=True)[0]
+    def tokenizer(text):
+        return clip.tokenize([text], truncate=True)[0]
 
     def preprocess_dataset(item):
         output = {}
