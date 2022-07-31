@@ -1,25 +1,24 @@
 """encode video with CLIP"""
+import os
 import sys
 
 import clip
 import numpy as np
 import torch
 
-from multiprocessing import SimpleQueue, Process, shared_memory
 from torchvision.transforms import ToPILImage, Compose, ToTensor, Normalize
+from video2numpy.frame_reader import FrameReader
 
-# from .reader_ffmpeg import read_vids
-from .batcher import get_dl
-from .reader import read_vids
 from .simplemapper import FrameMapper
-from .writer import write_embeddings
+
+# from .writer import write_embeddings
+from .utils import block2dl
 
 
 BATCH_SIZE = 256
-VID_CHUNK_SIZE = 100
+IMG_SIZE = 224
 EMB_DIM = 512
-QUALITY = "360p"
-N_DATASET_WORKERS = 8
+N_DATASET_WORKERS = 6
 
 
 def _convert_image_to_rgb(image):
@@ -66,21 +65,14 @@ def clip_video_encode(src, dest="", take_every_nth=1):
         ]
     )
 
-    info_q = SimpleQueue()
-    complete_q = SimpleQueue()  # TODO: SharedMemory hack, do properly
-
     fm = FrameMapper(model)
-    vr_proc = Process(target=read_vids, args=(fnames, info_q, complete_q, VID_CHUNK_SIZE, take_every_nth))
-    vr_proc.start()
+    fr = FrameReader(fnames, take_every_nth, IMG_SIZE, workers=N_DATASET_WORKERS)
+    fr.start_reading()
 
-    while True:
-        info = info_q.get()
-        if isinstance(info, str):
-            break
+    ct = 0
 
-        shm = shared_memory.SharedMemory(name=info["shm_name"])
-        block = np.ndarray((info["frame_count"], 224, 224, 3), dtype=np.uint8, buffer=shm.buf)
-        dl = get_dl(block, preprocess, BATCH_SIZE, N_DATASET_WORKERS)
+    for vid_block, info in fr:
+        dl = block2dl(vid_block, preprocess, BATCH_SIZE, 0)
 
         embeddings = []
         for batch in dl:
@@ -89,11 +81,9 @@ def clip_video_encode(src, dest="", take_every_nth=1):
                 embeddings.append(emb)
 
         embeddings = np.concatenate(embeddings)
-        write_embeddings(info["ind_dict"], embeddings, dest)
-        shm.close()
-
-    complete_q.put("DONE_MAPPING")  # TODO: SharedMemory hack, do properly
-    vr_proc.join()
+        ct += embeddings.shape[0]
+        save_pth = os.path.join(dest, info["dst_name"])
+        np.save(save_pth, embeddings)
 
 
 if __name__ == "__main__":
