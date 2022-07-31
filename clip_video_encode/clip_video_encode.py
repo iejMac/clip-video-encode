@@ -74,7 +74,7 @@ def clip_video_encode(src, dest="", take_every_nth=1):
     ct = 0
 
     for vid_block, info in fr:
-        dl = block2dl(vid_block, preprocess, BATCH_SIZE, N_DATASET_WORKERS)
+        dl = block2dl(vid_block, preprocess, BATCH_SIZE, 0)
 
         embeddings = []
         for batch in dl:
