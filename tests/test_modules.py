@@ -60,7 +60,7 @@ def test_mapper():
     model_input_shape = (3, 224, 224)
     model_output_dim = 512
 
-    fm = FrameMapper(model)
+    fm = FrameMapper(model, device)
 
     bs = 20
     batch = torch.rand(bs, *model_input_shape).to(device)
