@@ -13,7 +13,7 @@ BATCH_SIZE = 256
 class LiveNumpyEncoder:
     """class that watches directory for set of numpy arrays of videos to encode using CLIP."""
 
-    def __init__(self, data_dir, dest_dir, vids, mapper, preprocess):
+    def __init__(self, data_dir, dest_dir, vids, mapper, preprocess, remove_on_read=False):
         """
 
         Input:
@@ -23,6 +23,7 @@ class LiveNumpyEncoder:
                   JUST "NAME.npy", NOT FULL PATH
             mapper: model used to map frames to embeddings
             preprocess: function to preprocess the frames with
+            remove_on_read: remove arrays when done reading them
         """
         assert data_dir != dest_dir  # input and output will have same name
         self.data_dir = data_dir
@@ -31,6 +32,8 @@ class LiveNumpyEncoder:
 
         self.fm = mapper
         self.preprocess = preprocess
+
+        self.remove_on_read = remove_on_read
 
     def start(self):
         """starts live reading."""
@@ -47,12 +50,15 @@ class LiveNumpyEncoder:
             cur_len = 0
             for vid in available_vids:
                 assert vid.endswith(".npy")
-                vid_frames = np.load(os.path.join(self.data_dir, vid))
+                vid_path = os.path.join(self.data_dir, vid)
+                vid_frames = np.load(vid_path)
                 name_inds.append((vid, cur_len, cur_len + len(vid_frames)))
                 cur_len += len(vid_frames)
                 np_arrays.append(vid_frames)
 
                 self.vids.remove(vid)
+                if self.remove_on_read:
+                    os.remove(vid_path)
 
             frame_chunk = np.concatenate(np_arrays)
             dl = block2dl(frame_chunk, self.preprocess, BATCH_SIZE, N_DATASET_WORKERS)
