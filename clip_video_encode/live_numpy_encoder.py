@@ -55,10 +55,10 @@ class LiveNumpyEncoder:
             print(f"Found {len(available_vids)} arrays.")
 
             name_inds = []
-            cur_len = 0
 
             t0 = time.perf_counter()
 
+            cur_len = 0
             for vid in available_vids:
                 assert vid.endswith(".npy")
                 vid_path = os.path.join(self.data_dir, vid)
@@ -79,18 +79,15 @@ class LiveNumpyEncoder:
             frame_chunk = frame_array[:cur_len]
             dl = block2dl(frame_chunk, self.preprocess, BATCH_SIZE, N_DATASET_WORKERS)
 
-            # embeddings = []
             cur_len = 0
             for batch in dl:
                 emb = self.fm(batch.to(self.fm.device))
-                # embeddings.append(emb)
-                embedding_array[cur_len:cur_len+emb.shape[0]]
+                embedding_array[cur_len:cur_len+emb.shape[0]] = emb
                 cur_len += emb.shape[0]
 
             t_enc = time.perf_counter() - t0
             print(f"Encode time: {t_enc}")
 
-            # all_embs = np.concatenate(embeddings)
             all_embs = embedding_array[:cur_len]
             for name, i0, it in name_inds:
                 vid_embs = all_embs[i0:it]
