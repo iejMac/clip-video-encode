@@ -13,22 +13,23 @@ BATCH_SIZE = 256
 class LiveNumpyEncoder:
     """class that watches directory for set of numpy arrays of videos to encode using CLIP."""
 
-    def __init__(self, data_dir, dest_dir, vids, mapper, preprocess, remove_on_read=False):
+    def __init__(self, data_dir, dest_dir, n_vids, mapper, preprocess, frame_mem=4, remove_on_read=False):
         """
 
         Input:
             data_dir: directory to watch for np files
             dest_dir:  where to save embeddings to
-            vids: list of numpy array names to watch for (completes when all fnmaes have been seen).
-                  JUST "NAME.npy", NOT FULL PATH
+            n_vids: number of numpy array names to watch for. Completes after n_vids have been encoded
             mapper: model used to map frames to embeddings
             preprocess: function to preprocess the frames with
+            frame_mem: amount of memory in GB for shared frame array
             remove_on_read: remove arrays when done reading them
         """
         assert data_dir != dest_dir  # input and output will have same name
         self.data_dir = data_dir
         self.dest_dir = dest_dir
-        self.vids = vids
+        self.n_vids = n_vids
+        self.frame_mem = frame_mem
 
         self.fm = mapper
         self.preprocess = preprocess
@@ -37,7 +38,13 @@ class LiveNumpyEncoder:
 
     def start(self):
         """starts live reading."""
-        while len(self.vids) > 0:  # haven't seen all videos.
+
+        mem_size_b = int(self.frame_mem * 1024**3)
+        mem_frames = mem_size_b // (224**2 * 3)
+        frame_array = np.zeros((mem_frames, 224, 224, 3), dtype=np.uint8)
+        embedding_array = np.zeros((mem_frames, 512))
+
+        while self.n_vids > 0:  # haven't seen all videos.
             # TODO: decide if we need some checks here for incorrectly placed files
             available_vids = os.listdir(self.data_dir)  # for now assuming all vids in self.data_dir are correct
             if len(available_vids) == 0:
@@ -45,30 +52,43 @@ class LiveNumpyEncoder:
                 time.sleep(5)  # wait for arrays to come in
                 continue
 
-            np_arrays = []
+            print(f"Found {len(available_vids)} arrays.")
+
             name_inds = []
+
+            t0 = time.perf_counter()
+
             cur_len = 0
             for vid in available_vids:
                 assert vid.endswith(".npy")
                 vid_path = os.path.join(self.data_dir, vid)
                 vid_frames = np.load(vid_path)
-                name_inds.append((vid, cur_len, cur_len + len(vid_frames)))
-                cur_len += len(vid_frames)
-                np_arrays.append(vid_frames)
+                frame_array[cur_len : cur_len + vid_frames.shape[0]] = vid_frames
+                name_inds.append((vid, cur_len, cur_len + vid_frames.shape[0]))
+                cur_len += vid_frames.shape[0]
 
-                self.vids.remove(vid)
+                self.n_vids -= 1
                 if self.remove_on_read:
                     os.remove(vid_path)
 
-            frame_chunk = np.concatenate(np_arrays)
+            t_load = time.perf_counter() - t0
+            print(f"Load time: {t_load}")
+
+            t0 = time.perf_counter()
+
+            frame_chunk = frame_array[:cur_len]
             dl = block2dl(frame_chunk, self.preprocess, BATCH_SIZE, N_DATASET_WORKERS)
 
-            embeddings = []
+            cur_len = 0
             for batch in dl:
                 emb = self.fm(batch.to(self.fm.device))
-                embeddings.append(emb)
+                embedding_array[cur_len : cur_len + emb.shape[0]] = emb
+                cur_len += emb.shape[0]
 
-            all_embs = np.concatenate(embeddings)
+            t_enc = time.perf_counter() - t0
+            print(f"Encode time: {t_enc}")
+
+            all_embs = embedding_array[:cur_len]
             for name, i0, it in name_inds:
                 vid_embs = all_embs[i0:it]
                 save_pth = os.path.join(self.dest_dir, name)
