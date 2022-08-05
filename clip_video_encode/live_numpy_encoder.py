@@ -63,7 +63,7 @@ class LiveNumpyEncoder:
                 assert vid.endswith(".npy")
                 vid_path = os.path.join(self.data_dir, vid)
                 vid_frames = np.load(vid_path)
-                frame_array[cur_len:cur_len+vid_frames.shape[0]] = vid_frames
+                frame_array[cur_len : cur_len + vid_frames.shape[0]] = vid_frames
                 name_inds.append((vid, cur_len, cur_len + vid_frames.shape[0]))
                 cur_len += vid_frames.shape[0]
 
@@ -82,7 +82,7 @@ class LiveNumpyEncoder:
             cur_len = 0
             for batch in dl:
                 emb = self.fm(batch.to(self.fm.device))
-                embedding_array[cur_len:cur_len+emb.shape[0]] = emb
+                embedding_array[cur_len : cur_len + emb.shape[0]] = emb
                 cur_len += emb.shape[0]
 
             t_enc = time.perf_counter() - t0
