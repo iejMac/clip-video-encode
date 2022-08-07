@@ -93,7 +93,6 @@ class LiveNumpyEncoder:
 
             all_embs = embedding_array[:cur_len]
 
-
             for name, i0, it in name_inds:
                 save_pth = os.path.join(self.dest_dir, name)
                 with self.fs.open(save_pth, "wb") as f:
