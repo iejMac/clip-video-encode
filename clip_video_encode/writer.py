@@ -21,6 +21,8 @@ class FileWriter:
             nbp = BytesIO()
             np.save(nbp, arr)
             f.write(nbp.getbuffer())
+    def close(self):
+        pass
 
 
 class WebDatasetWriter:

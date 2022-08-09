@@ -69,7 +69,7 @@ def test_mapper():
     assert output.shape == (bs, model_output_dim)
 
 
-@pytest.mark.parameterize("writer_type", ["files", "webdataset"])
+@pytest.mark.parametrize("writer_type", ["files", "webdataset"])
 def test_writer(writer_type):
     with tempfile.TemporaryDirectory() as tmpdir:
         if writer_type == "files":
@@ -85,6 +85,7 @@ def test_writer(writer_type):
 
         for i, emb in enumerate(vid_embeds):
             writer.write(emb, f"{i}.npy")
+        writer.close()
 
         if writer_type == "files":
             for i in range(N_VIDS):
@@ -97,5 +98,5 @@ def test_writer(writer_type):
         elif writer_type == "webdataset":
             l = glob.glob(tmpdir + "/*.tar")
             assert len(l) == 1
-            assert l[0] == tmpdir + "/00000.tar":
+            assert l[0] == tmpdir + "/00000.tar"
             assert len(tarfile.open(tmpdir + "/00000.tar").getnames()) == N_VIDS
