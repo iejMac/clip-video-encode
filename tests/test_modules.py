@@ -12,7 +12,7 @@ from torchvision.transforms import Compose, Normalize, ToPILImage, ToTensor
 
 from clip_video_encode.utils import block2dl
 from clip_video_encode.simplemapper import FrameMapper
-from clip_video_encode.writer import write_embeddings
+from clip_video_encode.writer import FileWriter
 
 
 FRAME_COUNTS = {
@@ -74,17 +74,16 @@ def test_writer():
         N_FRAMES = 100
         lat_dim = 8
 
-        ind_dict = dict([(f"{i}.npy", (i * N_FRAMES, (i + 1) * N_FRAMES)) for i in range(N_VIDS)])
+        writer = FileWriter(tmpdir)
         vid_embeds = [np.ones((N_FRAMES, lat_dim), dtype=float) * i for i in range(N_VIDS)]
-        embeddings = np.concatenate(vid_embeds)
 
-        write_embeddings(ind_dict, embeddings, tmpdir)
+        for i, emb in enumerate(vid_embeds):
+            writer.write(emb, f"{i}.npy")
 
-        for dst_name, vid_inds in ind_dict.items():
+        for i in range(N_VIDS):
+            dst_name = f"{i}.npy"
             np_embeddings = np.load(os.path.join(tmpdir, dst_name))
-
-            i0, it = vid_inds
-            assert len(np_embeddings) == it - i0
+            assert np_embeddings.shape == (N_FRAMES, lat_dim)
 
             val = int(dst_name[0])
             assert np.all(np_embeddings == val)
