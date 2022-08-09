@@ -4,6 +4,8 @@ import os
 import fsspec
 import numpy as np
 
+from io import BytesIO
+
 
 class FileWriter:
     """Writes output as files."""
