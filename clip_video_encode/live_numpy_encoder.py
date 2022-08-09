@@ -8,6 +8,7 @@ import numpy as np
 from io import BytesIO
 
 from .utils import block2dl
+from .writer import FileWriter
 
 N_DATASET_WORKERS = 6
 BATCH_SIZE = 256
@@ -30,7 +31,7 @@ class LiveNumpyEncoder:
         """
         assert data_dir != dest_dir  # input and output will have same name
         self.data_dir = data_dir
-        self.fs, self.dest_dir = fsspec.core.url_to_fs(dest_dir)
+        self.writer = FileWriter(dest_dir)
         self.n_vids = n_vids
         self.frame_mem = frame_mem
 
@@ -94,8 +95,4 @@ class LiveNumpyEncoder:
             all_embs = embedding_array[:cur_len]
 
             for name, i0, it in name_inds:
-                save_pth = os.path.join(self.dest_dir, name)
-                with self.fs.open(save_pth, "wb") as f:
-                    nbp = BytesIO()
-                    np.save(nbp, all_embs[i0:it])
-                    f.write(nbp.getbuffer())
+                self.writer.write(all_embs[i0:it], name)
