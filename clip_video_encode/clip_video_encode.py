@@ -3,15 +3,16 @@ import os
 import sys
 
 import clip
+import fsspec
 import numpy as np
 import torch
 
+from io import BytesIO
 from torchvision.transforms import ToPILImage, Compose, ToTensor, Normalize
 from video2numpy.frame_reader import FrameReader
 
 from .simplemapper import FrameMapper
 
-# from .writer import write_embeddings
 from .utils import block2dl
 
 
@@ -53,6 +54,8 @@ def clip_video_encode(src, dest="", take_every_nth=1):
     else:
         fnames = src
 
+    fs, dest = fsspec.core.url_to_fs(dest)
+
     # Initialize model:
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model, _ = clip.load("ViT-B/32", device=device)
@@ -80,7 +83,10 @@ def clip_video_encode(src, dest="", take_every_nth=1):
 
         embeddings = np.concatenate(embeddings)
         save_pth = os.path.join(dest, info["dst_name"])
-        np.save(save_pth, embeddings)
+        with fs.open(save_pth, "wb") as f:
+            nbp = BytesIO()
+            np.save(nbp, embeddings)
+            f.write(nbp.getbuffer())
 
 
 if __name__ == "__main__":

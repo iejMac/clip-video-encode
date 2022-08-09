@@ -2,7 +2,10 @@
 import os
 import time
 
+import fsspec
 import numpy as np
+
+from io import BytesIO
 
 from .utils import block2dl
 
@@ -27,7 +30,7 @@ class LiveNumpyEncoder:
         """
         assert data_dir != dest_dir  # input and output will have same name
         self.data_dir = data_dir
-        self.dest_dir = dest_dir
+        self.fs, self.dest_dir = fsspec.core.url_to_fs(dest_dir)
         self.n_vids = n_vids
         self.frame_mem = frame_mem
 
@@ -89,7 +92,10 @@ class LiveNumpyEncoder:
             print(f"Encode time: {t_enc}")
 
             all_embs = embedding_array[:cur_len]
+
             for name, i0, it in name_inds:
-                vid_embs = all_embs[i0:it]
                 save_pth = os.path.join(self.dest_dir, name)
-                np.save(save_pth, vid_embs)
+                with self.fs.open(save_pth, "wb") as f:
+                    nbp = BytesIO()
+                    np.save(nbp, all_embs[i0:it])
+                    f.write(nbp.getbuffer())

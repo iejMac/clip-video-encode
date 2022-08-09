@@ -9,3 +9,4 @@ ffmpeg
 opencv-python
 youtube_dl
 video2numpy==2.1.0
+fsspec==2022.1.0
