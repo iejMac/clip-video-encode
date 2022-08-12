@@ -10,6 +10,7 @@ from io import BytesIO
 
 class FileWriter:
     """Writes output as files."""
+
     def __init__(self, output_folder):
         self.output_folder = output_folder
 
@@ -21,12 +22,14 @@ class FileWriter:
             nbp = BytesIO()
             np.save(nbp, arr)
             f.write(nbp.getbuffer())
+
     def close(self):
         pass
 
 
 class WebDatasetWriter:
     """Writes output in WebDataset format."""
+
     def __init__(self, output_folder, shard_id, oom_shard_count, encode_format):
         self.oom_shard_count = oom_shard_count
         shard_name = "{shard_id:0{oom_shard_count}d}".format(  # pylint: disable=consider-using-f-string
