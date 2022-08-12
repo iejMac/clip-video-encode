@@ -1,7 +1,6 @@
 """encode video with CLIP"""
 import os
 import sys
-import time
 
 import clip
 import fsspec
@@ -73,9 +72,6 @@ def clip_video_encode(src, dest="", take_every_nth=1, frame_workers=1):
     fr = FrameReader(fnames, take_every_nth, IMG_SIZE, workers=frame_workers)
     fr.start_reading()
 
-    t0 = time.perf_counter()
-    ct = 0
-
     frames, ind_dict = [], {}
     i = 1
     for vid_frames, info in fr:
@@ -84,7 +80,7 @@ def clip_video_encode(src, dest="", take_every_nth=1, frame_workers=1):
 
         if (i % CHUNK_SIZE == 0) or (i == len(fr)):
             vid_block = np.concatenate(frames)
-            dl = block2dl(vid_block, preprocess, BATCH_SIZE, N_DATASET_WORKERS)
+            dl = block2dl(vid_block, preprocess, BATCH_SIZE, 12)
 
             embeddings = []
             for batch in dl:
@@ -92,21 +88,17 @@ def clip_video_encode(src, dest="", take_every_nth=1, frame_workers=1):
                     emb = fm(batch.to(device))
                     embeddings.append(emb)
 
+
             embeddings = np.concatenate(embeddings)
-            ct += embeddings.shape[0]
             for dst_name, (i0, it) in ind_dict.items():
                 save_pth = os.path.join(dest, dst_name)
                 with fs.open(save_pth, "wb") as f:
                     nbp = BytesIO()
                     np.save(nbp, embeddings[i0:it])
                     f.write(nbp.getbuffer())
+
             frames, ind_dict = [], {}
         i += 1
-
-    tf = time.perf_counter()
-    print(ct)
-    print(tf-t0)
-    print(f"FPS: {ct/(tf-t0)}")
 
 
 if __name__ == "__main__":
