@@ -71,7 +71,7 @@ def clip_video_encode(src, dest="", take_every_nth=1, frame_workers=1, frame_mem
     )
 
     fm = FrameMapper(model, device)
-    fr = FrameReader(fnames, take_every_nth, IMG_SIZE, workers=frame_workers)
+    fr = FrameReader(fnames, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
     fr.start_reading()
 
     frames, ind_dict = [], {}
