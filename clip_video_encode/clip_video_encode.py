@@ -20,13 +20,14 @@ BATCH_SIZE = 256
 IMG_SIZE = 224
 EMB_DIM = 512
 N_DATASET_WORKERS = 6
+CHUNK_SIZE = 200
 
 
 def _convert_image_to_rgb(image):
     return image.convert("RGB")
 
 
-def clip_video_encode(src, dest="", take_every_nth=1):
+def clip_video_encode(src, dest="", take_every_nth=1, frame_workers=1, frame_memory_size=4):
     """
     Encode frames using CLIP image encoder
 
@@ -41,9 +42,10 @@ def clip_video_encode(src, dest="", take_every_nth=1):
         None: dest = src + .npy
       take_every_nth:
         int: only take every nth frame
-
-    Output:
-      None
+      frame_workers:
+        int: number of Processes to distribute video reading to.
+      frame_memory_size:
+        int: GB of memory for FrameReader.
     """
     if isinstance(src, str):
         if src.endswith(".txt"):  # list of mp4s or youtube links
@@ -69,24 +71,35 @@ def clip_video_encode(src, dest="", take_every_nth=1):
     )
 
     fm = FrameMapper(model, device)
-    fr = FrameReader(fnames, take_every_nth, IMG_SIZE, workers=N_DATASET_WORKERS)
+    fr = FrameReader(fnames, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
     fr.start_reading()
 
-    for vid_block, info in fr:
-        dl = block2dl(vid_block, preprocess, BATCH_SIZE, 0)
+    frames, ind_dict = [], {}
+    i = 1
+    for vid_frames, info in fr:
+        frames.append(vid_frames)
+        ind_dict[info["dst_name"]] = (len(frames), len(frames) + vid_frames.shape[0])
 
-        embeddings = []
-        for batch in dl:
-            with torch.no_grad():
-                emb = fm(batch.to(device))
-                embeddings.append(emb)
+        if (i % CHUNK_SIZE == 0) or (i == len(fr)):
+            vid_block = np.concatenate(frames)
+            dl = block2dl(vid_block, preprocess, BATCH_SIZE, 12)
 
-        embeddings = np.concatenate(embeddings)
-        save_pth = os.path.join(dest, info["dst_name"])
-        with fs.open(save_pth, "wb") as f:
-            nbp = BytesIO()
-            np.save(nbp, embeddings)
-            f.write(nbp.getbuffer())
+            embeddings = []
+            for batch in dl:
+                with torch.no_grad():
+                    emb = fm(batch.to(device))
+                    embeddings.append(emb)
+
+            embeddings = np.concatenate(embeddings)
+            for dst_name, (i0, it) in ind_dict.items():
+                save_pth = os.path.join(dest, dst_name)
+                with fs.open(save_pth, "wb") as f:
+                    nbp = BytesIO()
+                    np.save(nbp, embeddings[i0:it])
+                    f.write(nbp.getbuffer())
+
+            frames, ind_dict = [], {}
+        i += 1
 
 
 if __name__ == "__main__":
