@@ -27,7 +27,7 @@ def _convert_image_to_rgb(image):
     return image.convert("RGB")
 
 
-def clip_video_encode(src, dest="", take_every_nth=1, frame_workers=1):
+def clip_video_encode(src, dest="", take_every_nth=1, frame_workers=1, frame_memory_size=4):
     """
     Encode frames using CLIP image encoder
 
@@ -44,6 +44,8 @@ def clip_video_encode(src, dest="", take_every_nth=1, frame_workers=1):
         int: only take every nth frame
       frame_workers:
         int: number of Processes to distribute video reading to.
+      frame_memory_size:
+        int: GB of memory for FrameReader.
     """
     if isinstance(src, str):
         if src.endswith(".txt"):  # list of mp4s or youtube links
