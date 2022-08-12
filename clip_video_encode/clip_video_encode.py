@@ -20,13 +20,14 @@ BATCH_SIZE = 256
 IMG_SIZE = 224
 EMB_DIM = 512
 N_DATASET_WORKERS = 6
+CHUNK_SIZE = 10
 
 
 def _convert_image_to_rgb(image):
     return image.convert("RGB")
 
 
-def clip_video_encode(src, dest="", take_every_nth=1):
+def clip_video_encode(src, dest="", take_every_nth=1, frame_workers=1):
     """
     Encode frames using CLIP image encoder
 
@@ -41,9 +42,8 @@ def clip_video_encode(src, dest="", take_every_nth=1):
         None: dest = src + .npy
       take_every_nth:
         int: only take every nth frame
-
-    Output:
-      None
+      frame_workers:
+        int: number of Processes to distribute video reading to.
     """
     if isinstance(src, str):
         if src.endswith(".txt"):  # list of mp4s or youtube links
@@ -69,11 +69,11 @@ def clip_video_encode(src, dest="", take_every_nth=1):
     )
 
     fm = FrameMapper(model, device)
-    fr = FrameReader(fnames, take_every_nth, IMG_SIZE, workers=N_DATASET_WORKERS)
+    fr = FrameReader(fnames, take_every_nth, IMG_SIZE, workers=frame_workers)
     fr.start_reading()
 
     for vid_block, info in fr:
-        dl = block2dl(vid_block, preprocess, BATCH_SIZE, 0)
+        dl = block2dl(vid_block, preprocess, BATCH_SIZE, N_DATASET_WORKERS)
 
         embeddings = []
         for batch in dl:
