@@ -2,10 +2,7 @@
 import os
 import time
 
-import fsspec
 import numpy as np
-
-from io import BytesIO
 
 from .utils import block2dl
 from .writer import FileWriter

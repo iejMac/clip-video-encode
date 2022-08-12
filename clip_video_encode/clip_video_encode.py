@@ -1,13 +1,10 @@
 """encode video with CLIP"""
-import os
 import sys
 
 import clip
-import fsspec
 import numpy as np
 import torch
 
-from io import BytesIO
 from torchvision.transforms import ToPILImage, Compose, ToTensor, Normalize
 from video2numpy.frame_reader import FrameReader
 
