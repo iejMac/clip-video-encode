@@ -88,7 +88,6 @@ def clip_video_encode(src, dest="", take_every_nth=1, frame_workers=1):
                     emb = fm(batch.to(device))
                     embeddings.append(emb)
 
-
             embeddings = np.concatenate(embeddings)
             for dst_name, (i0, it) in ind_dict.items():
                 save_pth = os.path.join(dest, dst_name)
