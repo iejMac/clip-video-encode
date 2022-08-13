@@ -37,11 +37,13 @@ class Reader:
                     columns_to_read = self.columns + meta_columns
                     df = pq.read_table(f, columns=columns_to_read)
         elif isinstance(src, list):
-            df = pa.Table.from_arrays([src], names=self.columns)
+            df = pa.Table.from_arrays([src], names=["videoLoc"])
 
         df = df.add_column(0, "index", [list(range(df.num_rows))]) # add ID's
+        self.columns = ["index"] + self.columns
         self.df = df
 
     def get_data(self):
         vids = self.df["videoLoc"].to_pylist()
-        return vids, None
+        meta = dict([(meta, self.df[meta]) for meta in self.meta_columns])
+        return vids, meta
