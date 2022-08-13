@@ -34,6 +34,9 @@ class Reader:
                 pass
             else:
                 fnames = src
+        elif isinstance(src, list):
+            df = pa.Table.from_arrays([list(range(len(src))), src], names=["videoID", "videoLoc"])
+            
        
         self.df = df
 
