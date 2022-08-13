@@ -98,5 +98,5 @@ def test_writer(writer_type):
         elif writer_type == "webdataset":
             l = glob.glob(tmpdir + "/*.tar")
             assert len(l) == 1
-            assert l[0] == tmpdir + "/000000000.tar"
-            assert len(tarfile.open(tmpdir + "/000000000.tar").getnames()) == N_VIDS
+            assert l[0] == tmpdir + "/00000.tar"
+            assert len(tarfile.open(tmpdir + "/00000.tar").getnames()) == N_VIDS
