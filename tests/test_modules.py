@@ -75,7 +75,7 @@ def test_writer(writer_type):
         if writer_type == "files":
             writer = FileWriter(tmpdir)
         elif writer_type == "webdataset":
-            writer = WebDatasetWriter(tmpdir, 0, 5, "npy")
+            writer = WebDatasetWriter(tmpdir, 5, "npy")
 
         N_VIDS = 5
         N_FRAMES = 100
