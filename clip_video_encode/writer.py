@@ -58,7 +58,7 @@ class WebDatasetWriter:
         if self.count >= self.maxcount:
             self.shard_id += 1
             self.count = 0
-            self.create_shard(self.shard_id)
+            self.create_shard()
 
         sample = {"__key__": key, self.encode_format: arr}
         self.tarwriter.write(sample)
