@@ -30,6 +30,8 @@ class Reader:
             if src.endswith(".txt"):
                 df = csv_pq.read_csv(src, read_options=csv_pq.ReadOptions(column_names=["videoLoc"]))
                 df = df.add_column(0, "videoID", [list(range(df.num_rows))]) # add ID's
+            elif src.endswith(".csv"):
+                df = csv_pq.read_csv(src)
             elif src.endswith(".parquet"):
                 pass
             else:
