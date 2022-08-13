@@ -6,13 +6,14 @@ import tempfile
 import clip
 import multiprocessing
 import numpy as np
+import tarfile
 import torch
 
 from torchvision.transforms import Compose, Normalize, ToPILImage, ToTensor
 
 from clip_video_encode.utils import block2dl
 from clip_video_encode.simplemapper import FrameMapper
-from clip_video_encode.writer import write_embeddings
+from clip_video_encode.writer import FileWriter, WebDatasetWriter
 
 
 FRAME_COUNTS = {
@@ -68,23 +69,34 @@ def test_mapper():
     assert output.shape == (bs, model_output_dim)
 
 
-def test_writer():
+@pytest.mark.parametrize("writer_type", ["files", "webdataset"])
+def test_writer(writer_type):
     with tempfile.TemporaryDirectory() as tmpdir:
+        if writer_type == "files":
+            writer = FileWriter(tmpdir)
+        elif writer_type == "webdataset":
+            writer = WebDatasetWriter(tmpdir, 5, "npy")
+
         N_VIDS = 5
         N_FRAMES = 100
         lat_dim = 8
 
-        ind_dict = dict([(f"{i}.npy", (i * N_FRAMES, (i + 1) * N_FRAMES)) for i in range(N_VIDS)])
         vid_embeds = [np.ones((N_FRAMES, lat_dim), dtype=float) * i for i in range(N_VIDS)]
-        embeddings = np.concatenate(vid_embeds)
 
-        write_embeddings(ind_dict, embeddings, tmpdir)
+        for i, emb in enumerate(vid_embeds):
+            writer.write(emb, f"{i}.npy")
+        writer.close()
 
-        for dst_name, vid_inds in ind_dict.items():
-            np_embeddings = np.load(os.path.join(tmpdir, dst_name))
+        if writer_type == "files":
+            for i in range(N_VIDS):
+                dst_name = f"{i}.npy"
+                np_embeddings = np.load(os.path.join(tmpdir, dst_name))
+                assert np_embeddings.shape == (N_FRAMES, lat_dim)
 
-            i0, it = vid_inds
-            assert len(np_embeddings) == it - i0
-
-            val = int(dst_name[0])
-            assert np.all(np_embeddings == val)
+                val = int(dst_name[0])
+                assert np.all(np_embeddings == val)
+        elif writer_type == "webdataset":
+            l = glob.glob(tmpdir + "/*.tar")
+            assert len(l) == 1
+            assert l[0] == tmpdir + "/00000.tar"
+            assert len(tarfile.open(tmpdir + "/00000.tar").getnames()) == N_VIDS
