@@ -10,3 +10,4 @@ opencv-python
 youtube_dl
 video2numpy==2.2.0
 fsspec==2022.1.0
+pyarrow>=6.0.1,<8
