@@ -9,7 +9,7 @@ from torchvision.transforms import ToPILImage, Compose, ToTensor, Normalize
 from video2numpy.frame_reader import FrameReader
 
 from .simplemapper import FrameMapper
-from .writer import FileWriter
+from .writer import FileWriter, WebDatasetWriter
 
 from .utils import block2dl
 
@@ -25,7 +25,7 @@ def _convert_image_to_rgb(image):
     return image.convert("RGB")
 
 
-def clip_video_encode(src, dest="", take_every_nth=1, frame_workers=1, frame_memory_size=4):
+def clip_video_encode(src, dest="", output_format="files", take_every_nth=1, frame_workers=1, frame_memory_size=4):
     """
     Encode frames using CLIP image encoder
 
@@ -38,6 +38,8 @@ def clip_video_encode(src, dest="", take_every_nth=1, frame_workers=1, frame_mem
       dest:
         str: directory where to save embeddings to
         None: dest = src + .npy
+      output_format:
+        str: "files" or "webdataset"
       take_every_nth:
         int: only take every nth frame
       frame_workers:
@@ -54,7 +56,12 @@ def clip_video_encode(src, dest="", take_every_nth=1, frame_workers=1, frame_mem
     else:
         fnames = src
 
-    writer = FileWriter(dest)
+    assert output_format in ["files", "webdataset"]
+    if output_format == "files":
+        writer = FileWriter(dest)
+    elif output_format == "webdataset":
+        # TODO: maybe include params for this?
+        writer = WebDatasetWriter(dest, 9, "npy", maxcount=10000, shard_id=0)
 
     # Initialize model:
     device = "cuda" if torch.cuda.is_available() else "cpu"
