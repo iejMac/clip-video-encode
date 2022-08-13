@@ -42,16 +42,16 @@ class WebDatasetWriter:
         self.tarwriter = None
         self.tar_fd = None
 
-        self.create_shard(shard_id)
+        self.create_shard()
 
-    def create_shard(self, shard_id):
+    def create_shard(self):
         self.close()
         shard_name = "{shard_id:0{oom_shard_count}d}".format(  # pylint: disable=consider-using-f-string
             shard_id=self.shard_id, oom_shard_count=self.oom_shard_count
         )
         fs, output_path = fsspec.core.url_to_fs(self.output_folder)
         self.tar_fd = fs.open(f"{output_path}/{shard_name}.tar", "wb")
-        self.tarwriter = wds.TarWriter(self.tar_fd)       
+        self.tarwriter = wds.TarWriter(self.tar_fd)
 
     def write(self, arr, key):
         """write sample to tars"""
@@ -59,7 +59,7 @@ class WebDatasetWriter:
             self.shard_id += 1
             self.count = 0
             self.create_shard(self.shard_id)
-            
+
         sample = {"__key__": key, self.encode_format: arr}
         self.tarwriter.write(sample)
         self.count += 1
