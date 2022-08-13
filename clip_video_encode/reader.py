@@ -12,7 +12,7 @@ class Reader:
     * videoLoc - location of video either on disc or URL
     * videoID - unique ID of each video. If not provided then ID = index in file
     """
-    def __init__(self, src, meta_columns=None):
+    def __init__(self, src, meta_columns=[]):
         """
         Input:
 
@@ -26,6 +26,8 @@ class Reader:
             list[str]: columns of useful metadata to save with videos
         """
 
+        self.columns = ["videoID", "videoLoc"]
+
         if isinstance(src, str):
             if src.endswith(".txt"):
                 df = csv_pq.read_csv(src, read_options=csv_pq.ReadOptions(column_names=["videoLoc"]))
@@ -33,11 +35,11 @@ class Reader:
             elif src.endswith(".csv"):
                 df = csv_pq.read_csv(src)
             elif src.endswith(".parquet"):
-                pass
-            else:
-                fnames = src
+                with open(src, "rb") as f:
+                    columns_to_read = self.columns + meta_columns
+                    df = pq.read_table(f, columns=columns_to_read)
         elif isinstance(src, list):
-            df = pa.Table.from_arrays([list(range(len(src))), src], names=["videoID", "videoLoc"])
+            df = pa.Table.from_arrays([list(range(len(src))), src], names=self.columns)
             
        
         self.df = df
