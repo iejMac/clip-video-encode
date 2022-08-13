@@ -8,10 +8,10 @@ import torch
 from torchvision.transforms import ToPILImage, Compose, ToTensor, Normalize
 from video2numpy.frame_reader import FrameReader
 
+from .reader import Reader
 from .simplemapper import FrameMapper
-from .writer import FileWriter, WebDatasetWriter
-
 from .utils import block2dl
+from .writer import FileWriter, WebDatasetWriter
 
 
 BATCH_SIZE = 256
@@ -47,14 +47,8 @@ def clip_video_encode(src, dest="", output_format="files", take_every_nth=1, fra
       frame_memory_size:
         int: GB of memory for FrameReader.
     """
-    if isinstance(src, str):
-        if src.endswith(".txt"):  # list of mp4s or youtube links
-            with open(src, "r", encoding="utf-8") as f:
-                fnames = [fn[:-1] for fn in f.readlines()]
-        else:  # mp4 or youtube link
-            fnames = [src]
-    else:
-        fnames = src
+    reader = Reader(src)
+    vids, meta = reader.get_data()
 
     assert output_format in ["files", "webdataset"]
     if output_format == "files":
@@ -76,12 +70,13 @@ def clip_video_encode(src, dest="", output_format="files", take_every_nth=1, fra
     )
 
     fm = FrameMapper(model, device)
-    fr = FrameReader(fnames, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
+    fr = FrameReader(vids, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
     fr.start_reading()
 
     frames, ind_dict = [], {}
     i = 1
     for vid_frames, info in fr:
+        # TODO: info should contain index of metadata in meta variable returned from Reader
         frames.append(vid_frames)
         ind_dict[info["dst_name"]] = (len(frames), len(frames) + vid_frames.shape[0])
 
