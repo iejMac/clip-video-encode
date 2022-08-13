@@ -10,7 +10,6 @@ class Reader:
 
     Necessary columns (reader will always look for these columns in .parquet:
     * videoLoc - location of video either on disc or URL
-    * videoID - unique ID of each video. If not provided then ID = index in file
     """
     def __init__(self, src, meta_columns=[]):
         """
@@ -20,18 +19,17 @@ class Reader:
             str: path to mp4 file
             str: youtube link
             str: path to txt file with multiple mp4's or youtube links
-            list: list with multiple mp4's or youtube links
+            list[str]: list with multiple mp4's or youtube links
 
         meta_columns:
             list[str]: columns of useful metadata to save with videos
         """
-
-        self.columns = ["videoID", "videoLoc"]
+        self.columns = ["videoLoc"]
+        self.meta_columns = meta_columns
 
         if isinstance(src, str):
             if src.endswith(".txt"):
                 df = csv_pq.read_csv(src, read_options=csv_pq.ReadOptions(column_names=["videoLoc"]))
-                df = df.add_column(0, "videoID", [list(range(df.num_rows))]) # add ID's
             elif src.endswith(".csv"):
                 df = csv_pq.read_csv(src)
             elif src.endswith(".parquet"):
@@ -39,9 +37,9 @@ class Reader:
                     columns_to_read = self.columns + meta_columns
                     df = pq.read_table(f, columns=columns_to_read)
         elif isinstance(src, list):
-            df = pa.Table.from_arrays([list(range(len(src))), src], names=self.columns)
-            
-       
+            df = pa.Table.from_arrays([src], names=self.columns)
+
+        df = df.add_column(0, "index", [list(range(df.num_rows))]) # add ID's
         self.df = df
 
     def get_data(self):
