@@ -72,7 +72,7 @@ class WebDatasetWriter:
 
         sample = {"__key__": key, self.encode_format: arr}
         if metadata is not None:
-            sample["json"] = json.dumps(meta, indent=4)
+            sample["json"] = json.dumps(metadata, indent=4)
 
         self.tarwriter.write(sample)
         self.count += 1
