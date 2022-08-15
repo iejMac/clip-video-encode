@@ -11,6 +11,11 @@ class Reader:
     Necessary columns (reader will always look for these columns in parquet and csv):
     * videoLoc - location of video either on disc or URL
     * videoID - unique ID of each video, if not provided, ID = index
+
+    Additional special columns:
+    * caption - will be saved in separate key.txt file
+
+    anything else - put in key.json metadata file
     """
     def __init__(self, src, meta_columns=[]):
         """

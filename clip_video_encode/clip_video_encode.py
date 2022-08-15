@@ -49,7 +49,8 @@ def clip_video_encode(src, dest="", output_format="files", take_every_nth=1, fra
       metadata_columns:
         str: a comma separated list of metadata column names to look for in src
     """
-    reader = Reader(src, list(metadata_columns))
+    metadata_columns = list(metadata_columns) if isinstance(metadata_columns, tuple) else [metadata_columns]
+    reader = Reader(src, metadata_columns)
     vids, IDS, meta = reader.get_data()
     meta_refs = list(range(len(vids)))
 
@@ -58,7 +59,7 @@ def clip_video_encode(src, dest="", output_format="files", take_every_nth=1, fra
         writer = FileWriter(dest)
     elif output_format == "webdataset":
         # TODO: maybe include params for this?
-        writer = WebDatasetWriter(dest, 9, "npy", maxcount=10000, shard_id=0)
+        writer = WebDatasetWriter(dest, 9, "npy", maxcount=200, shard_id=0)
 
     # Initialize model:
     device = "cuda" if torch.cuda.is_available() else "cpu"

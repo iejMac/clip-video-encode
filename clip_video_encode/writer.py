@@ -17,7 +17,7 @@ class FileWriter:
 
         self.fs, self.output_folder = fsspec.core.url_to_fs(output_folder)
 
-    def write(self, arr, key, metadata=None):
+    def write(self, arr, key, metadata={}):
         key = str(key)
         save_pth = os.path.join(self.output_folder, key + ".npy")
         with self.fs.open(save_pth, "wb") as f:
@@ -25,11 +25,17 @@ class FileWriter:
             np.save(nbp, arr)
             f.write(nbp.getbuffer())
 
-        if metadata is not None:
-            j = json.dumps(metadata, indent=4)
-            meta_filename = os.path.join(self.output_folder, key + ".json")
-            with self.fs.open(meta_filename, "w") as f:
-                f.write(j)
+        if len(metadata) > 0:
+            if "caption" in metadata:
+                caption = str(metadata.pop("caption"))
+                caption_filename = os.path.join(self.output_folder, key + ".txt")
+                with self.fs.open(caption_filename, "w") as f:
+                    f.write(caption)
+            if len(metadata) > 0:
+                j = json.dumps(metadata, indent=4)
+                meta_filename = os.path.join(self.output_folder, key + ".json")
+                with self.fs.open(meta_filename, "w") as f:
+                    f.write(j)
             
 
     def close(self):
@@ -62,7 +68,7 @@ class WebDatasetWriter:
         self.tar_fd = fs.open(f"{output_path}/{shard_name}.tar", "wb")
         self.tarwriter = wds.TarWriter(self.tar_fd)
 
-    def write(self, arr, key, metadata=None):
+    def write(self, arr, key, metadata={}):
         key = str(key)
         """write sample to tars"""
         if self.count >= self.maxcount:
@@ -71,8 +77,11 @@ class WebDatasetWriter:
             self.create_shard()
 
         sample = {"__key__": key, self.encode_format: arr}
-        if metadata is not None:
-            sample["json"] = json.dumps(metadata, indent=4)
+        if len(metadata) > 0:
+            if "caption" in metadata:
+                sample["txt"] = str(metadata.pop("caption"))
+            if len(metadata) > 0:
+                sample["json"] = json.dumps(metadata, indent=4)
 
         self.tarwriter.write(sample)
         self.count += 1
