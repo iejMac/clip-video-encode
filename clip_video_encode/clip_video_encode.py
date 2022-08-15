@@ -32,7 +32,8 @@ def clip_video_encode(
         take_every_nth=1,
         frame_workers=1,
         frame_memory_size=4,
-        metadata_columns=[]
+        metadata_columns=[],
+        use_dst_name=False,
     ):
     """
     Encode frames using CLIP image encoder
@@ -64,6 +65,8 @@ def clip_video_encode(
     vids, IDS, meta = reader.get_data()
     meta_refs = list(range(len(vids)))
 
+    ref_type = "dst_name" if use_dst_name else "reference"
+
     assert output_format in ["files", "webdataset"]
     if output_format == "files":
         writer = FileWriter(dest)
@@ -91,7 +94,7 @@ def clip_video_encode(
     i = 1
     for vid_frames, info in fr:
         frames.append(vid_frames)
-        ind_dict[info["reference"]] = (len(frames), len(frames) + vid_frames.shape[0])
+        ind_dict[info[ref_type]] = (len(frames), len(frames) + vid_frames.shape[0])
 
         if (i % CHUNK_SIZE == 0) or (i == len(fr)):
             vid_block = np.concatenate(frames)
@@ -105,7 +108,7 @@ def clip_video_encode(
 
             embeddings = np.concatenate(embeddings)
             for ref, (i0, it) in ind_dict.items():
-                vidID = IDS[ref]
+                vidID = ref[:-4] if use_dst_name else IDS[ref]
                 vid_meta = {}
                 for k in meta:
                     vid_meta[k] = meta[k][ref].as_py()
