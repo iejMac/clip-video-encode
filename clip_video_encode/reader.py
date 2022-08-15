@@ -52,7 +52,7 @@ class Reader:
     def get_data(self):
         vids = self.df["videoLoc"].to_pylist()
         ids = self.df["videoID"]
-        meta = dict(
+        meta = dict(  # pylint: disable=consider-using-dict-comprehension
             [(meta, self.df[meta]) for meta in self.meta_columns]
-        )  # pylint: disable=consider-using-dict-comprehension
+        )
         return vids, ids, meta
