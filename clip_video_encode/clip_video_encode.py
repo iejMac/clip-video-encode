@@ -72,7 +72,7 @@ def clip_video_encode(
         writer = FileWriter(dest)
     elif output_format == "webdataset":
         # TODO: maybe include params for this?
-        writer = WebDatasetWriter(dest, 9, "npy", maxcount=200, shard_id=0)
+        writer = WebDatasetWriter(dest, 9, "npy", maxcount=10000, shard_id=0)
 
     # Initialize model:
     device = "cuda" if torch.cuda.is_available() else "cpu"
