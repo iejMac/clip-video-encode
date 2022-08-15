@@ -87,7 +87,6 @@ def clip_video_encode(
     )
 
     fm = FrameMapper(model, device)
-    print(vids)
     fr = FrameReader(vids, meta_refs, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
     fr.start_reading()
 
