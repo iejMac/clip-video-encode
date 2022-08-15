@@ -65,7 +65,7 @@ def create_embeddingwebdataset(
         output["embeddings"] = embedding_transform(emb)
 
         if enable_text:
-            text_data = item["cap"]
+            text_data = item["txt"]
             text = text_data.decode("utf-8")
             output["text"] = text
             output["text_tokens"] = tokenizer(text)

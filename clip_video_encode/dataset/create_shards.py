@@ -94,7 +94,7 @@ with wds.ShardWriter(pattern, maxsize=int(args.maxsize), maxcount=int(args.maxco
 
             ds_key = keys[i]
 
-            sample = {"__key__": ds_key, "npy": embeddings, "cap": text}
+            sample = {"__key__": ds_key, "npy": embeddings, "txt": text}
             if args.json and keys[i] in json_keys:
                 sample["json"] = json_dicts[keys[i]]
             sink.write(sample)
