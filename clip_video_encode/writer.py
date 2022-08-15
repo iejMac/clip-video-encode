@@ -19,7 +19,7 @@ class FileWriter:
 
     def write(self, arr, key, metadata=None):
         key = str(key)
-        save_pth = os.path.join(self.output_folder, key)
+        save_pth = os.path.join(self.output_folder, key + ".npy")
         with self.fs.open(save_pth, "wb") as f:
             nbp = BytesIO()
             np.save(nbp, arr)
@@ -27,7 +27,7 @@ class FileWriter:
 
         if metadata is not None:
             j = json.dumps(metadata, indent=4)
-            meta_filename = f"{self.output_folder}/{key}.json"
+            meta_filename = os.path.join(self.output_folder, key + ".json")
             with self.fs.open(meta_filename, "w") as f:
                 f.write(j)
             
