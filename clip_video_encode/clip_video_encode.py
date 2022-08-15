@@ -25,7 +25,7 @@ def _convert_image_to_rgb(image):
     return image.convert("RGB")
 
 
-def clip_video_encode(src, dest="", output_format="files", take_every_nth=1, frame_workers=1, frame_memory_size=4, metadata_columns=""):
+def clip_video_encode(src, dest="", output_format="files", take_every_nth=1, frame_workers=1, frame_memory_size=4, metadata_columns=[]):
     """
     Encode frames using CLIP image encoder
 
@@ -49,7 +49,9 @@ def clip_video_encode(src, dest="", output_format="files", take_every_nth=1, fra
       metadata_columns:
         str: a comma separated list of metadata column names to look for in src
     """
-    metadata_columns = list(metadata_columns) if isinstance(metadata_columns, tuple) else [metadata_columns]
+    if isinstance(metadata_columns, str):
+        metadata_columns = [metadata_columns] if metadata_columns != "" else []
+    metadata_columns = list(metadata_columns) if isinstance(metadata_columns, tuple) else metadata_columns
     reader = Reader(src, metadata_columns)
     vids, IDS, meta = reader.get_data()
     meta_refs = list(range(len(vids)))
