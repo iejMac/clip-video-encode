@@ -25,7 +25,7 @@ def _convert_image_to_rgb(image):
     return image.convert("RGB")
 
 
-def clip_video_encode(src, dest="", output_format="files", take_every_nth=1, frame_workers=1, frame_memory_size=4):
+def clip_video_encode(src, dest="", output_format="files", take_every_nth=1, frame_workers=1, frame_memory_size=4, metadata_columns=""):
     """
     Encode frames using CLIP image encoder
 
@@ -46,9 +46,12 @@ def clip_video_encode(src, dest="", output_format="files", take_every_nth=1, fra
         int: number of Processes to distribute video reading to.
       frame_memory_size:
         int: GB of memory for FrameReader.
+      metadata_columns:
+        str: a comma separated list of metadata column names to look for in src
     """
-    reader = Reader(src)
-    vids, meta = reader.get_data()
+    reader = Reader(src, list(metadata_columns))
+    vids, IDS, meta = reader.get_data()
+    meta_refs = list(range(len(vids)))
 
     assert output_format in ["files", "webdataset"]
     if output_format == "files":
@@ -70,15 +73,14 @@ def clip_video_encode(src, dest="", output_format="files", take_every_nth=1, fra
     )
 
     fm = FrameMapper(model, device)
-    fr = FrameReader(vids, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
+    fr = FrameReader(vids, meta_refs, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
     fr.start_reading()
 
     frames, ind_dict = [], {}
     i = 1
     for vid_frames, info in fr:
-        # TODO: info should contain index of metadata in meta variable returned from Reader
         frames.append(vid_frames)
-        ind_dict[info["dst_name"]] = (len(frames), len(frames) + vid_frames.shape[0])
+        ind_dict[info["reference"]] = (len(frames), len(frames) + vid_frames.shape[0])
 
         if (i % CHUNK_SIZE == 0) or (i == len(fr)):
             vid_block = np.concatenate(frames)
@@ -91,8 +93,12 @@ def clip_video_encode(src, dest="", output_format="files", take_every_nth=1, fra
                     embeddings.append(emb)
 
             embeddings = np.concatenate(embeddings)
-            for dst_name, (i0, it) in ind_dict.items():
-                writer.write(embeddings[i0:it], dst_name)
+            for ref, (i0, it) in ind_dict.items():
+                vidID = IDS[ref]
+                vid_meta = {}
+                for k in meta:
+                    vid_meta[k] = meta[k][ref].as_py()
+                writer.write(embeddings[i0:it], vidID, vid_meta)
             frames, ind_dict = [], {}
         i += 1
 

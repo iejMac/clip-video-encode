@@ -8,8 +8,9 @@ import pandas as pd
 class Reader:
     """Parses input into required data.
 
-    Necessary columns (reader will always look for these columns in .parquet:
+    Necessary columns (reader will always look for these columns in parquet and csv):
     * videoLoc - location of video either on disc or URL
+    * videoID - unique ID of each video, if not provided, ID = index
     """
     def __init__(self, src, meta_columns=[]):
         """
@@ -24,12 +25,13 @@ class Reader:
         meta_columns:
             list[str]: columns of useful metadata to save with videos
         """
-        self.columns = ["videoLoc"]
+        self.columns = ["videoID", "videoLoc"]
         self.meta_columns = meta_columns
 
         if isinstance(src, str):
             if src.endswith(".txt"):
                 df = csv_pq.read_csv(src, read_options=csv_pq.ReadOptions(column_names=["videoLoc"]))
+                df = df.add_column(0, "videoID", [list(range(df.num_rows))]) # add ID's
             elif src.endswith(".csv"):
                 df = csv_pq.read_csv(src)
             elif src.endswith(".parquet"):
@@ -38,12 +40,13 @@ class Reader:
                     df = pq.read_table(f, columns=columns_to_read)
         elif isinstance(src, list):
             df = pa.Table.from_arrays([src], names=["videoLoc"])
+            df = df.add_column(0, "videoID", [list(range(df.num_rows))]) # add ID's
 
-        df = df.add_column(0, "index", [list(range(df.num_rows))]) # add ID's
-        self.columns = ["index"] + self.columns
         self.df = df
+
 
     def get_data(self):
         vids = self.df["videoLoc"].to_pylist()
+        IDS = self.df["videoID"]
         meta = dict([(meta, self.df[meta]) for meta in self.meta_columns])
-        return vids, meta
+        return vids, IDS, meta
