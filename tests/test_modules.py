@@ -84,7 +84,7 @@ def test_writer(writer_type):
         vid_embeds = [np.ones((N_FRAMES, lat_dim), dtype=float) * i for i in range(N_VIDS)]
 
         for i, emb in enumerate(vid_embeds):
-            writer.write(emb, f"{i}.npy")
+            writer.write(emb, str(i))
         writer.close()
 
         if writer_type == "files":
