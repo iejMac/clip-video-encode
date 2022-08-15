@@ -15,7 +15,13 @@ FRAME_COUNTS = {
 def test_encode():
     test_path = "tests/test_videos"
     with tempfile.TemporaryDirectory() as tmpdir:
-        clip_video_encode(os.path.join(test_path, "test_list.txt"), tmpdir, take_every_nth=2, frame_memory_size=0.125, use_dst_name=True)
+        clip_video_encode(
+            os.path.join(test_path, "test_list.txt"),
+            tmpdir,
+            take_every_nth=2,
+            frame_memory_size=0.125,
+            use_dst_name=True,
+        )
         for vid in FRAME_COUNTS.keys():
             if vid.endswith(".mp4"):
                 ld = vid[:-4] + ".npy"

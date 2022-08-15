@@ -26,15 +26,15 @@ def _convert_image_to_rgb(image):
 
 
 def clip_video_encode(
-        src,
-        dest="",
-        output_format="files",
-        take_every_nth=1,
-        frame_workers=1,
-        frame_memory_size=4,
-        metadata_columns=[],
-        use_dst_name=False,
-    ):
+    src,
+    dest="",
+    output_format="files",
+    take_every_nth=1,
+    frame_workers=1,
+    frame_memory_size=4,
+    metadata_columns="",
+    use_dst_name=False,
+):
     """
     Encode frames using CLIP image encoder
 
@@ -62,7 +62,7 @@ def clip_video_encode(
         metadata_columns = [metadata_columns] if metadata_columns != "" else []
     metadata_columns = list(metadata_columns) if isinstance(metadata_columns, tuple) else metadata_columns
     reader = Reader(src, metadata_columns)
-    vids, IDS, meta = reader.get_data()
+    vids, ids, meta = reader.get_data()
     meta_refs = list(range(len(vids)))
 
     ref_type = "dst_name" if use_dst_name else "reference"
@@ -108,11 +108,11 @@ def clip_video_encode(
 
             embeddings = np.concatenate(embeddings)
             for ref, (i0, it) in ind_dict.items():
-                vidID = ref[:-4] if use_dst_name else IDS[ref]
+                vid_id = ref[:-4] if use_dst_name else ids[ref]
                 vid_meta = {}
                 for k in meta:
                     vid_meta[k] = meta[k][ref].as_py()
-                writer.write(embeddings[i0:it], vidID, vid_meta)
+                writer.write(embeddings[i0:it], vid_id, vid_meta)
             frames, ind_dict = [], {}
         i += 1
 
