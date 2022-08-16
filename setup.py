@@ -17,7 +17,7 @@ if __name__ == "__main__":
         name="clip-video-encode",
         packages=find_packages(),
         include_package_data=True,
-        version="1.1.0",
+        version="1.2.0",
         license="MIT",
         description="Easily compute clip embeddings from video frames",
         long_description=long_description,
