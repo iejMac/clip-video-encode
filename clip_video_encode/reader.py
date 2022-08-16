@@ -31,6 +31,12 @@ class Reader:
             list[str]: columns of useful metadata to save with videos
         """
         self.columns = ["videoID", "videoLoc"]
+        no_dupl_temp = []
+        for c in self.columns:
+            if c in meta_columns:
+                no_dupl_temp.append(c)
+                meta_columns.remove(c)
+
         self.meta_columns = meta_columns if meta_columns is not None else []
 
         if isinstance(src, str):
@@ -49,6 +55,8 @@ class Reader:
             df = pa.Table.from_arrays([src], names=["videoLoc"])
             df = df.add_column(0, "videoID", [list(range(df.num_rows))])  # add ID's
 
+        for c in no_dupl_temp:
+            self.meta_columns.append(c)
         self.df = df
 
     def get_data(self):
