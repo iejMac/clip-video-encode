@@ -100,14 +100,15 @@ def test_writer(writer_type):
         elif writer_type == "webdataset":
             l = glob.glob(tmpdir + "/*.tar")
             assert len(l) == 2
-            assert l[0] == tmpdir + "/00000.tar"
+            for i in range(2):
+                assert tmpdir + f"/0000{i}.tar" in l
             assert len(tarfile.open(tmpdir + "/00000.tar").getnames()) == (N_VIDS//2) * 3
 
 
 @pytest.mark.parametrize("input_format", ["txt", "csv", "parquet"])
 def test_reader(input_format):
     src = f"tests/test_videos/test_list.{input_format}"
-    metadata_columns = ["meta1", "meta2"] if input_format != "txt" else []
+    metadata_columns = ["caption", "meta"] if input_format != "txt" else []
     reader = Reader(src, metadata_columns)
     vids, ids, meta = reader.get_data()
 
