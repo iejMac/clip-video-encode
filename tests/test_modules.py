@@ -14,13 +14,13 @@ from torchvision.transforms import Compose, Normalize, ToPILImage, ToTensor
 from clip_video_encode.utils import block2dl
 from clip_video_encode.simplemapper import FrameMapper
 from clip_video_encode.writer import FileWriter, WebDatasetWriter
+from clip_video_encode.reader import Reader
 
 
 FRAME_COUNTS = {
     "vid1.mp4": 56,
     "vid2.mp4": 134,
 }
-
 
 def _convert_image_to_rgb(image):
     return image.convert("RGB")
@@ -102,3 +102,19 @@ def test_writer(writer_type):
             assert len(l) == 2
             assert l[0] == tmpdir + "/00000.tar"
             assert len(tarfile.open(tmpdir + "/00000.tar").getnames()) == (N_VIDS//2) * 3
+
+
+@pytest.mark.parametrize("input_format", ["txt", "csv", "parquet"])
+def test_reader(input_format):
+    src = f"tests/test_videos/test_list.{input_format}"
+    metadata_columns = ["meta1", "meta2"] if input_format != "txt" else []
+    reader = Reader(src, metadata_columns)
+    vids, ids, meta = reader.get_data()
+
+    assert len(vids) == 3
+    for i in range(len(vids)):
+        assert ids[i].as_py() == i
+
+    assert len(meta) == len(metadata_columns)
+    for k in meta:
+        assert k in metadata_columns

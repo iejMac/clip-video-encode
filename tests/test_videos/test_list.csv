@@ -1,0 +1,4 @@
+videoLoc,videoID,meta1,meta2
+tests/test_videos/vid1.mp4,0,vid1,video1
+tests/test_videos/vid2.mp4,1,vid2,video2
+https://www.youtube.com/watch?v=a8DM-tD9w2I,2,yt1,youtube1
