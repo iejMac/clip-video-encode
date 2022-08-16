@@ -22,6 +22,7 @@ FRAME_COUNTS = {
     "vid2.mp4": 134,
 }
 
+
 def _convert_image_to_rgb(image):
     return image.convert("RGB")
 
@@ -102,7 +103,7 @@ def test_writer(writer_type):
             assert len(l) == 2
             for i in range(2):
                 assert tmpdir + f"/0000{i}.tar" in l
-            assert len(tarfile.open(tmpdir + "/00000.tar").getnames()) == (N_VIDS//2) * 3
+            assert len(tarfile.open(tmpdir + "/00000.tar").getnames()) == (N_VIDS // 2) * 3
 
 
 @pytest.mark.parametrize("input_format", ["txt", "csv", "parquet"])
