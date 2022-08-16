@@ -34,6 +34,7 @@ def clip_video_encode(
     frame_memory_size=4,
     metadata_columns="",
     use_dst_name=False,
+    starting_shard_id=0,
 ):
     """
     Encode frames using CLIP image encoder
@@ -59,6 +60,8 @@ def clip_video_encode(
         str: a comma separated list of metadata column names to look for in src
       use_dst_name:
         bool: use the save name suggested by video2numpy
+      starting_shard_id:
+        int: if output_format is webdataset this sets the ID of the first shard
     """
     if isinstance(metadata_columns, str):
         metadata_columns = [metadata_columns] if metadata_columns != "" else []
@@ -72,7 +75,7 @@ def clip_video_encode(
         writer = FileWriter(dest)
     elif output_format == "webdataset":
         # TODO: maybe include params for this?
-        writer = WebDatasetWriter(dest, 9, "npy", maxcount=10000, shard_id=0)
+        writer = WebDatasetWriter(dest, 9, "npy", maxcount=10000, shard_id=starting_shard_id)
 
     # Initialize model:
     device = "cuda" if torch.cuda.is_available() else "cpu"
