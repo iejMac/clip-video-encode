@@ -75,16 +75,17 @@ def test_writer(writer_type):
         if writer_type == "files":
             writer = FileWriter(tmpdir)
         elif writer_type == "webdataset":
-            writer = WebDatasetWriter(tmpdir, 5, "npy")
+            writer = WebDatasetWriter(tmpdir, 5, "npy", 5)
 
-        N_VIDS = 5
+        N_VIDS = 10
         N_FRAMES = 100
         lat_dim = 8
 
         vid_embeds = [np.ones((N_FRAMES, lat_dim), dtype=float) * i for i in range(N_VIDS)]
 
         for i, emb in enumerate(vid_embeds):
-            writer.write(emb, str(i))
+            fake_metadata = {"caption": str(i), "x": i}
+            writer.write(emb, str(i), fake_metadata)
         writer.close()
 
         if writer_type == "files":
@@ -95,8 +96,9 @@ def test_writer(writer_type):
 
                 val = int(dst_name[0])
                 assert np.all(np_embeddings == val)
+                assert len(os.listdir(tmpdir)) == N_VIDS * 3
         elif writer_type == "webdataset":
             l = glob.glob(tmpdir + "/*.tar")
-            assert len(l) == 1
+            assert len(l) == 2
             assert l[0] == tmpdir + "/00000.tar"
-            assert len(tarfile.open(tmpdir + "/00000.tar").getnames()) == N_VIDS
+            assert len(tarfile.open(tmpdir + "/00000.tar").getnames()) == (N_VIDS//2) * 3
