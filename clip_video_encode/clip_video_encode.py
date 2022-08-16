@@ -57,6 +57,8 @@ def clip_video_encode(
         int: GB of memory for FrameReader.
       metadata_columns:
         str: a comma separated list of metadata column names to look for in src
+      use_dst_name:
+        bool: use the save name suggested by video2numpy
     """
     if isinstance(metadata_columns, str):
         metadata_columns = [metadata_columns] if metadata_columns != "" else []
