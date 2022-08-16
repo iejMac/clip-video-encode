@@ -43,7 +43,9 @@ class Reader:
                 with open(src, "rb") as f:
                     columns_to_read = self.columns + meta_columns
                     df = pq.read_table(f, columns=columns_to_read)
-        elif isinstance(src, list):
+            else: # singular video (mp4 or link)
+                src = [src]
+        if isinstance(src, list):
             df = pa.Table.from_arrays([src], names=["videoLoc"])
             df = df.add_column(0, "videoID", [list(range(df.num_rows))])  # add ID's
 
