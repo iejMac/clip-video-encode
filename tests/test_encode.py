@@ -16,12 +16,15 @@ def test_encode():
     test_path = "tests/test_videos"
     with tempfile.TemporaryDirectory() as tmpdir:
         clip_video_encode(
-            os.path.join(test_path, "test_list.txt"),
+            os.path.join(test_path, "test_list.parquet"),
             tmpdir,
+            output_format="files",
             take_every_nth=2,
             frame_memory_size=0.125,
+            metadata_columns=["caption", "meta"],
             use_dst_name=True,
         )
+        assert len(os.listdir(tmpdir)) == len(FRAME_COUNTS) * 3
         for vid in FRAME_COUNTS.keys():
             if vid.endswith(".mp4"):
                 ld = vid[:-4] + ".npy"
