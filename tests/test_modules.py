@@ -14,6 +14,7 @@ from torchvision.transforms import Compose, Normalize, ToPILImage, ToTensor
 from clip_video_encode.utils import block2dl
 from clip_video_encode.simplemapper import FrameMapper
 from clip_video_encode.writer import FileWriter, WebDatasetWriter
+from clip_video_encode.reader import Reader
 
 
 FRAME_COUNTS = {
@@ -75,16 +76,17 @@ def test_writer(writer_type):
         if writer_type == "files":
             writer = FileWriter(tmpdir)
         elif writer_type == "webdataset":
-            writer = WebDatasetWriter(tmpdir, 5, "npy")
+            writer = WebDatasetWriter(tmpdir, 5, "npy", 5)
 
-        N_VIDS = 5
+        N_VIDS = 10
         N_FRAMES = 100
         lat_dim = 8
 
         vid_embeds = [np.ones((N_FRAMES, lat_dim), dtype=float) * i for i in range(N_VIDS)]
 
         for i, emb in enumerate(vid_embeds):
-            writer.write(emb, f"{i}.npy")
+            fake_metadata = {"caption": str(i), "x": i}
+            writer.write(emb, str(i), fake_metadata)
         writer.close()
 
         if writer_type == "files":
@@ -95,8 +97,26 @@ def test_writer(writer_type):
 
                 val = int(dst_name[0])
                 assert np.all(np_embeddings == val)
+                assert len(os.listdir(tmpdir)) == N_VIDS * 3
         elif writer_type == "webdataset":
             l = glob.glob(tmpdir + "/*.tar")
-            assert len(l) == 1
-            assert l[0] == tmpdir + "/00000.tar"
-            assert len(tarfile.open(tmpdir + "/00000.tar").getnames()) == N_VIDS
+            assert len(l) == 2
+            for i in range(2):
+                assert tmpdir + f"/0000{i}.tar" in l
+            assert len(tarfile.open(tmpdir + "/00000.tar").getnames()) == (N_VIDS // 2) * 3
+
+
+@pytest.mark.parametrize("input_format", ["txt", "csv", "parquet"])
+def test_reader(input_format):
+    src = f"tests/test_videos/test_list.{input_format}"
+    metadata_columns = ["caption", "meta"] if input_format != "txt" else []
+    reader = Reader(src, metadata_columns)
+    vids, ids, meta = reader.get_data()
+
+    assert len(vids) == 3
+    for i in range(len(vids)):
+        assert ids[i].as_py() == i
+
+    assert len(meta) == len(metadata_columns)
+    for k in meta:
+        assert k in metadata_columns

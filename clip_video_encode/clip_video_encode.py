@@ -8,10 +8,10 @@ import torch
 from torchvision.transforms import ToPILImage, Compose, ToTensor, Normalize
 from video2numpy.frame_reader import FrameReader
 
+from .reader import Reader
 from .simplemapper import FrameMapper
-from .writer import FileWriter, WebDatasetWriter
-
 from .utils import block2dl
+from .writer import FileWriter, WebDatasetWriter
 
 
 BATCH_SIZE = 256
@@ -25,7 +25,16 @@ def _convert_image_to_rgb(image):
     return image.convert("RGB")
 
 
-def clip_video_encode(src, dest="", output_format="files", take_every_nth=1, frame_workers=1, frame_memory_size=4):
+def clip_video_encode(
+    src,
+    dest="",
+    output_format="files",
+    take_every_nth=1,
+    frame_workers=1,
+    frame_memory_size=4,
+    metadata_columns="",
+    use_dst_name=False,
+):
     """
     Encode frames using CLIP image encoder
 
@@ -46,15 +55,17 @@ def clip_video_encode(src, dest="", output_format="files", take_every_nth=1, fra
         int: number of Processes to distribute video reading to.
       frame_memory_size:
         int: GB of memory for FrameReader.
+      metadata_columns:
+        str: a comma separated list of metadata column names to look for in src
+      use_dst_name:
+        bool: use the save name suggested by video2numpy
     """
-    if isinstance(src, str):
-        if src.endswith(".txt"):  # list of mp4s or youtube links
-            with open(src, "r", encoding="utf-8") as f:
-                fnames = [fn[:-1] for fn in f.readlines()]
-        else:  # mp4 or youtube link
-            fnames = [src]
-    else:
-        fnames = src
+    if isinstance(metadata_columns, str):
+        metadata_columns = [metadata_columns] if metadata_columns != "" else []
+    metadata_columns = list(metadata_columns) if isinstance(metadata_columns, tuple) else metadata_columns
+    reader = Reader(src, metadata_columns)
+    vids, ids, meta = reader.get_data()
+    meta_refs = list(range(len(vids)))
 
     assert output_format in ["files", "webdataset"]
     if output_format == "files":
@@ -76,14 +87,14 @@ def clip_video_encode(src, dest="", output_format="files", take_every_nth=1, fra
     )
 
     fm = FrameMapper(model, device)
-    fr = FrameReader(fnames, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
+    fr = FrameReader(vids, meta_refs, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
     fr.start_reading()
 
     frames, ind_dict = [], {}
     i = 1
     for vid_frames, info in fr:
         frames.append(vid_frames)
-        ind_dict[info["dst_name"]] = (len(frames), len(frames) + vid_frames.shape[0])
+        ind_dict[info["reference"]] = (len(frames), len(frames) + vid_frames.shape[0], info["dst_name"])
 
         if (i % CHUNK_SIZE == 0) or (i == len(fr)):
             vid_block = np.concatenate(frames)
@@ -96,8 +107,12 @@ def clip_video_encode(src, dest="", output_format="files", take_every_nth=1, fra
                     embeddings.append(emb)
 
             embeddings = np.concatenate(embeddings)
-            for dst_name, (i0, it) in ind_dict.items():
-                writer.write(embeddings[i0:it], dst_name)
+            for ref, (i0, it, dst_name) in ind_dict.items():
+                vid_id = dst_name[:-4] if use_dst_name else ids[ref]
+                vid_meta = {}
+                for k in meta:
+                    vid_meta[k] = meta[k][ref].as_py()
+                writer.write(embeddings[i0:it], vid_id, vid_meta)
             frames, ind_dict = [], {}
         i += 1
 
