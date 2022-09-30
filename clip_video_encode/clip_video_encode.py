@@ -91,10 +91,12 @@ def clip_video_encode(
     fr.start_reading()
 
     frames, ind_dict = [], {}
+    block_size = 0
     i = 1
     for vid_frames, info in fr:
         frames.append(vid_frames)
-        ind_dict[info["reference"]] = (len(frames), len(frames) + vid_frames.shape[0], info["dst_name"])
+        ind_dict[info["reference"]] = (block_size, block_size + vid_frames.shape[0], info["dst_name"])
+        block_size += vid_frames.shape[0]
 
         if (i % CHUNK_SIZE == 0) or (i == len(fr)):
             vid_block = np.concatenate(frames)
@@ -114,6 +116,7 @@ def clip_video_encode(
                     vid_meta[k] = meta[k][ref].as_py()
                 writer.write(embeddings[i0:it], vid_id, vid_meta)
             frames, ind_dict = [], {}
+            block_size = 0
         i += 1
 
 
