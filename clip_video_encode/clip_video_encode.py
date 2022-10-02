@@ -2,6 +2,7 @@
 import sys
 
 import clip
+import math
 import numpy as np
 import torch
 
@@ -12,6 +13,7 @@ from .reader import Reader
 from .simplemapper import FrameMapper
 from .utils import block2dl
 from .writer import FileWriter, WebDatasetWriter
+from .distributed import world_info_from_env
 
 
 BATCH_SIZE = 256
@@ -34,6 +36,7 @@ def clip_video_encode(
     frame_memory_size=4,
     metadata_columns="",
     use_dst_name=False,
+    distribute="none",
 ):
     """
     Encode frames using CLIP image encoder
@@ -59,6 +62,8 @@ def clip_video_encode(
         str: a comma separated list of metadata column names to look for in src
       use_dst_name:
         bool: use the save name suggested by video2numpy
+      distribute:
+        str: distribution strategy, currently either slurm or none
     """
     if isinstance(metadata_columns, str):
         metadata_columns = [metadata_columns] if metadata_columns != "" else []
@@ -67,12 +72,25 @@ def clip_video_encode(
     vids, ids, meta = reader.get_data()
     meta_refs = list(range(len(vids)))
 
+    starting_shard_id = 0
+    shard_sample_count = 2
+
+    if distribute == "slurm":
+        _, global_rank, world_size = world_info_from_env()
+        work_size = math.ceil(len(vids) / world_size)
+        ws, wf = global_rank * work_size, (global_rank + 1) * work_size
+        vids = vids[ws:wf]
+        ids = ids[ws:wf]
+        for mc in meta.keys():
+            meta[mc] = meta[mc][ws:wf]
+        starting_shard_id += math.ceil(work_size / shard_sample_count) * global_rank
+
     assert output_format in ["files", "webdataset"]
     if output_format == "files":
         writer = FileWriter(dest)
     elif output_format == "webdataset":
         # TODO: maybe include params for this?
-        writer = WebDatasetWriter(dest, 9, "npy", maxcount=10000, shard_id=0)
+        writer = WebDatasetWriter(dest, 9, "npy", maxcount=shard_sample_count, shard_id=starting_shard_id)
 
     # Initialize model:
     device = "cuda" if torch.cuda.is_available() else "cpu"
