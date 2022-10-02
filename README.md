@@ -3,7 +3,7 @@
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rom1504/clip-video-encode/blob/master/notebook/clip-video-encode.ipynb)
 [![Try it on gitpod](https://img.shields.io/badge/try-on%20gitpod-brightgreen.svg)](https://gitpod.io/#https://github.com/rom1504/clip-video-encode)
 
-Easily compute clip embeddings from video frames (mp4 or youtube links)
+Easily compute clip embeddings from video frames.
 
 ## Install
 
@@ -35,21 +35,41 @@ DESCRIPTION
       dest:
         str: directory where to save embeddings to
         None: dest = src + .npy
+      output_format:
+        str: "files" or "webdataset"
       take_every_nth:
         int: only take every nth frame
-
-    Output:
-      None
+      frame_workers:
+        int: number of Processes to distribute video reading to.
+      frame_memory_size:
+        int: GB of memory for FrameReader.
+      metadata_columns:
+        str: a comma separated list of metadata column names to look for in src
+      use_dst_name:
+        bool: use the save name suggested by video2numpy
+      distribute:
+        str: distribution strategy, currently either slurm or none
 
 POSITIONAL ARGUMENTS
     SRC
 
 FLAGS
     --dest=DEST
-        Type: Optional[]
-        Default: None
+        Default: ''
+    --output_format=OUTPUT_FORMAT
+        Default: 'files'
     --take_every_nth=TAKE_EVERY_NTH
         Default: 1
+    --frame_workers=FRAME_WORKERS
+        Default: 1
+    --frame_memory_size=FRAME_MEMORY_SIZE
+        Default: 4
+    --metadata_columns=METADATA_COLUMNS
+        Default: ''
+    --use_dst_name=USE_DST_NAME
+        Default: False
+    --distribute=DISTRIBUTE
+        Default: 'none'
 ```
 
 ## API
@@ -68,14 +88,12 @@ clip_video_encode(VIDS, EMBEDDING_DIR, take_every_5)
 
 ## Who is using clip-video-encode?
 * [CLIP-Kinetics700](https://huggingface.co/datasets/iejMac/CLIP-Kinetics700) - The Kinetics700 dataset (700GB) can be compressed to ~8GB using clip-video-encode at 1 FPS
+* [CLIP-WebVid](https://huggingface.co/datasets/iejMac/CLIP-WebVid) - The WebVid dataset (10M videos) encoded as CLIP ViT-B/32 embeddings at 1 FPS.
 
 ## Examples
 Check out some cool clip-video-encode examples:
 * [Thing detector](https://github.com/iejMac/clip-video-encode/tree/main/examples/thing_detector) - Look for things in videos using clip-video-encode generated embeddings.
-
-## For development
-
-Either locally, or in [gitpod](https://gitpod.io/#https://github.com/rom1504/clip-video-encode) (do `export PIP_USER=false` there)
+* [Large dataset processing](https://github.com/iejMac/clip-video-encode/tree/main/clip_video_encode/dataset) - If you want to process a large dataset (like WebVid) into CLIP embeddings see the example at the bottom of the linked README.md.
 
 Setup a virtualenv:
 
