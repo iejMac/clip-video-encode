@@ -12,6 +12,7 @@ from .reader import Reader
 from .simplemapper import FrameMapper
 from .utils import block2dl
 from .writer import FileWriter, WebDatasetWriter
+from .distributed import world_info_from_env
 
 
 BATCH_SIZE = 256
@@ -70,7 +71,12 @@ def clip_video_encode(
     vids, ids, meta = reader.get_data()
     meta_refs = list(range(len(vids)))
 
+    print(type(vids))
+    print(type(ids))
+    print(type(meta))
+
     if distribute == "slurm":
+        local_rank, global_rank, world_size = world_info_from_env()
         # TODO: select vids according to global rank
 
     assert output_format in ["files", "webdataset"]
