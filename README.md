@@ -3,7 +3,7 @@
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rom1504/clip-video-encode/blob/master/notebook/clip-video-encode.ipynb)
 [![Try it on gitpod](https://img.shields.io/badge/try-on%20gitpod-brightgreen.svg)](https://gitpod.io/#https://github.com/rom1504/clip-video-encode)
 
-Easily compute clip embeddings from video frames (mp4 or youtube links)
+Easily compute clip embeddings from video frames.
 
 ## Install
 
