@@ -34,6 +34,7 @@ def clip_video_encode(
     frame_memory_size=4,
     metadata_columns="",
     use_dst_name=False,
+    distribute="none",
 ):
     """
     Encode frames using CLIP image encoder
@@ -59,6 +60,8 @@ def clip_video_encode(
         str: a comma separated list of metadata column names to look for in src
       use_dst_name:
         bool: use the save name suggested by video2numpy
+      distribute:
+        str: distribution strategy, currently either slurm or none
     """
     if isinstance(metadata_columns, str):
         metadata_columns = [metadata_columns] if metadata_columns != "" else []
@@ -66,6 +69,9 @@ def clip_video_encode(
     reader = Reader(src, metadata_columns)
     vids, ids, meta = reader.get_data()
     meta_refs = list(range(len(vids)))
+
+    if distribute == "slurm":
+        # TODO: select vids according to global rank
 
     assert output_format in ["files", "webdataset"]
     if output_format == "files":
