@@ -73,11 +73,12 @@ def clip_video_encode(
     meta_refs = list(range(len(vids)))
 
     starting_shard_id = 0
-    shard_sample_count = 2
+    shard_sample_count = 10000
 
     if distribute == "slurm":
         _, global_rank, world_size = world_info_from_env()
         work_size = math.ceil(len(vids) / world_size)
+        print(f"Slurm worker {global_rank} processing {work_size} videos...")
         ws, wf = global_rank * work_size, (global_rank + 1) * work_size
         vids = vids[ws:wf]
         ids = ids[ws:wf]
