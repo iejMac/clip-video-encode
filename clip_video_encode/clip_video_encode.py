@@ -1,7 +1,7 @@
 """encode video with CLIP"""
 import sys
 
-import clip
+import open_clip
 import math
 import numpy as np
 import torch
@@ -95,7 +95,7 @@ def clip_video_encode(
 
     # Initialize model:
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model, _ = clip.load("ViT-B/32", device=device)
+    model, _, _ = open_clip.create_model_and_transforms('ViT-B-32-quickgelu', pretrained='laion400m_e32', device=device)
     preprocess = Compose(
         [
             ToPILImage(),
@@ -123,7 +123,7 @@ def clip_video_encode(
 
             embeddings = []
             for batch in dl:
-                with torch.no_grad():
+                with torch.no_grad(), torch.cuda.amp.autocast():
                     emb = fm(batch.to(device))
                     embeddings.append(emb)
 
