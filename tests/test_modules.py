@@ -3,7 +3,7 @@ import glob
 import pytest
 import tempfile
 
-import clip
+import open_clip
 import multiprocessing
 import numpy as np
 import tarfile
@@ -57,7 +57,7 @@ def test_utils():
 def test_mapper():
     # Initialize model:
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model, _ = clip.load("ViT-B/32", device=device)
+    model, _, _ = open_clip.create_model_and_transforms('ViT-B-32-quickgelu', pretrained='laion400m_e32', device=device)
 
     model_input_shape = (3, 224, 224)
     model_output_dim = 512
@@ -66,7 +66,8 @@ def test_mapper():
 
     bs = 20
     batch = torch.rand(bs, *model_input_shape).to(device)
-    output = fm(batch)
+    with torch.no_grad(), torch.cuda.amp.autocast():
+        output = fm(batch)
     assert output.shape == (bs, model_output_dim)
 
 
