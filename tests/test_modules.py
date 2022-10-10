@@ -57,7 +57,7 @@ def test_utils():
 def test_mapper():
     # Initialize model:
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model, _, _ = open_clip.create_model_and_transforms('ViT-B-32-quickgelu', pretrained='laion400m_e32', device=device)
+    model, _, _ = open_clip.create_model_and_transforms("ViT-B-32-quickgelu", pretrained="laion400m_e32", device=device)
 
     model_input_shape = (3, 224, 224)
     model_output_dim = 512

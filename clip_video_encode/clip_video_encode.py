@@ -95,7 +95,7 @@ def clip_video_encode(
 
     # Initialize model:
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model, _, _ = open_clip.create_model_and_transforms('ViT-B-32-quickgelu', pretrained='laion400m_e32', device=device)
+    model, _, _ = open_clip.create_model_and_transforms("ViT-B-32-quickgelu", pretrained="laion400m_e32", device=device)
     preprocess = Compose(
         [
             ToPILImage(),
