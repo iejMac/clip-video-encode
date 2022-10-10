@@ -37,6 +37,8 @@ def clip_video_encode(
     metadata_columns="",
     use_dst_name=False,
     distribute="none",
+    oc_model_name="ViT-B-32",
+    pretrained="laion2b_s34b_b79k",
 ):
     """
     Encode frames using CLIP image encoder
@@ -64,6 +66,10 @@ def clip_video_encode(
         bool: use the save name suggested by video2numpy
       distribute:
         str: distribution strategy, currently either slurm or none
+      oc_model_name:
+        str: open_clip model name, used for selecting CLIP architecture
+      pretrained:
+        str: open_clip pretrained weights name
     """
     if isinstance(metadata_columns, str):
         metadata_columns = [metadata_columns] if metadata_columns != "" else []
@@ -95,7 +101,7 @@ def clip_video_encode(
 
     # Initialize model:
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model, _, _ = open_clip.create_model_and_transforms("ViT-B-32-quickgelu", pretrained="laion400m_e32", device=device)
+    model, _, _ = open_clip.create_model_and_transforms(oc_model_name, pretrained=pretrained, device=device)
     preprocess = Compose(
         [
             ToPILImage(),
