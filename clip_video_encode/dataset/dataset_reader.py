@@ -5,9 +5,10 @@ used https://github.com/rom1504/laion-prepro/blob/main/laion5B/usage_guide/datal
 """
 
 import io
+import json
 
-import clip
 import numpy as np
+import open_clip
 import torch
 import webdataset as wds
 
@@ -47,7 +48,7 @@ def create_embeddingwebdataset(
     dataset = wds.WebDataset(urls)
     # TODO: different tokeinzers??
     def tokenizer(text):
-        return clip.tokenize([text], truncate=True)[0]
+        return open_clip.tokenize([text])[0]
 
     def preprocess_dataset(item):
         output = {}
@@ -71,7 +72,8 @@ def create_embeddingwebdataset(
             output["text_tokens"] = tokenizer(text)
         if enable_meta:
             meta_data = item["json"]
-            meta = meta_data.decode("utf-8")
+            meta = json.loads(meta_data)
+            # meta = meta_data.decode("utf-8")
             output["meta"] = meta
         return output
 

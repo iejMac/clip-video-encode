@@ -3,7 +3,7 @@ import glob
 import pytest
 import tempfile
 
-import clip
+import open_clip
 import multiprocessing
 import numpy as np
 import tarfile
@@ -53,20 +53,21 @@ def test_utils():
         batch_count += 1
     assert batch_count == int(N_FRAMES / BATCH_SIZE)
 
-
-def test_mapper():
+@pytest.mark.parametrize("oc_model_name", ["ViT-B-32", "ViT-L-14"])
+def test_mapper(oc_model_name):
     # Initialize model:
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model, _ = clip.load("ViT-B/32", device=device)
+    model, _, _ = open_clip.create_model_and_transforms(oc_model_name, pretrained="laion400m_e32", device=device)
 
     model_input_shape = (3, 224, 224)
-    model_output_dim = 512
+    model_output_dim = 512 if oc_model_name == "ViT-B-32" else 768
 
     fm = FrameMapper(model, device)
 
     bs = 20
     batch = torch.rand(bs, *model_input_shape).to(device)
-    output = fm(batch)
+    with torch.no_grad(), torch.cuda.amp.autocast():
+        output = fm(batch)
     assert output.shape == (bs, model_output_dim)
 
 
