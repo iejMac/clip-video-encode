@@ -53,14 +53,14 @@ def test_utils():
         batch_count += 1
     assert batch_count == int(N_FRAMES / BATCH_SIZE)
 
-
-def test_mapper():
+@pytest.mark.parametrize("oc_model_name", ["ViT-B-32", "ViT-L-14"])
+def test_mapper(oc_model_name):
     # Initialize model:
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model, _, _ = open_clip.create_model_and_transforms("ViT-B-32-quickgelu", pretrained="laion400m_e32", device=device)
+    model, _, _ = open_clip.create_model_and_transforms(oc_model_name, pretrained="laion400m_e32", device=device)
 
     model_input_shape = (3, 224, 224)
-    model_output_dim = 512
+    model_output_dim = 512 if oc_model_name == "ViT-B-32" else 768
 
     fm = FrameMapper(model, device)
 
