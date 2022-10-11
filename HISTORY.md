@@ -1,3 +1,9 @@
+## 1.3.0
+
+* Transition from OpenAI CLIP to open_clip CLIP + option to select between available CLIP models
+* Bug fix - correct video-text alignment for large dataset creation tasks
+* Distributing jobs across multiple Slurm nodes is now possible
+
 ## 1.2.0
 
 * Take parquet or csv as input and write metadata and captions

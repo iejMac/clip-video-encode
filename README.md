@@ -49,6 +49,10 @@ DESCRIPTION
         bool: use the save name suggested by video2numpy
       distribute:
         str: distribution strategy, currently either slurm or none
+      oc_model_name:
+        str: open_clip model name, used for selecting CLIP architecture
+      pretrained:
+        str: open_clip pretrained weights name
 
 POSITIONAL ARGUMENTS
     SRC
@@ -70,6 +74,10 @@ FLAGS
         Default: False
     --distribute=DISTRIBUTE
         Default: 'none'
+    --oc_model_name=OC_MODEL_NAME
+        Default: 'ViT-B-32'
+    --pretrained=PRETRAINED
+        Default: 'laion2b_s34b_b79k'
 ```
 
 ## API
