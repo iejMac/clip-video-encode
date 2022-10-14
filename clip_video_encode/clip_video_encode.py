@@ -103,7 +103,7 @@ def clip_video_encode(
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model, _, preprocess = open_clip.create_model_and_transforms(oc_model_name, pretrained=pretrained, device=device)
     preprocess.transforms = [ToPILImage()] + preprocess.transforms[-3:]
-    '''
+    """
     preprocess = Compose(
         [
             ToPILImage(),
@@ -112,7 +112,7 @@ def clip_video_encode(
             Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
         ]
     )
-    '''
+    """
 
     fm = FrameMapper(model, device)
     fr = FrameReader(vids, meta_refs, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)

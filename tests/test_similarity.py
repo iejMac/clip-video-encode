@@ -13,7 +13,7 @@ def test_similarity(video):
     test_path = "tests/test_videos"
     with tempfile.TemporaryDirectory() as tmpdir:
         clip_video_encode(
-            ["tests/test_videos/vid1.mp4", "tests/test_videos/vid2.mp4"]
+            ["tests/test_videos/vid1.mp4", "tests/test_videos/vid2.mp4"],
             tmpdir,
             output_format="files",
             take_every_nth=2,

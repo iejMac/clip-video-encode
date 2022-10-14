@@ -53,6 +53,7 @@ def test_utils():
         batch_count += 1
     assert batch_count == int(N_FRAMES / BATCH_SIZE)
 
+
 @pytest.mark.parametrize("oc_model_name", ["ViT-B-32", "ViT-L-14"])
 def test_mapper(oc_model_name):
     # Initialize model:
