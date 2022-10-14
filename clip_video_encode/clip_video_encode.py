@@ -102,7 +102,7 @@ def clip_video_encode(
     # Initialize model:
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model, _, preprocess = open_clip.create_model_and_transforms(oc_model_name, pretrained=pretrained, device=device)
-    preprocess.transforms = preprocess.transforms[-3:]
+    preprocess.transforms = [ToPILImage()] + preprocess.transforms[-3:]
     '''
     preprocess = Compose(
         [
