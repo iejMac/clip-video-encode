@@ -118,7 +118,7 @@ def clip_video_encode(
         ind_dict[info["reference"]] = (block_size, block_size + vid_frames.shape[0], info["dst_name"])
         block_size += vid_frames.shape[0]
 
-        if (i % CHUNK_SIZE == 0) or (i == len(fr)):
+        if (i % CHUNK_SIZE == 0) or (i == len(fr) - 1):
             vid_block = np.concatenate(frames)
             dl = block2dl(vid_block, preprocess, BATCH_SIZE, 12)
 
