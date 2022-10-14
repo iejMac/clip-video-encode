@@ -82,7 +82,7 @@ def clip_video_encode(
     shard_sample_count = 10000
 
     if distribute == "slurm":
-        _, global_rank, world_size = world_info_from_env()
+        local_rank, global_rank, world_size = world_info_from_env()
         work_size = math.ceil(len(vids) / world_size)
         print(f"Slurm worker {global_rank} processing {work_size} videos...")
         ws, wf = global_rank * work_size, (global_rank + 1) * work_size
@@ -91,6 +91,9 @@ def clip_video_encode(
         for mc in meta.keys():
             meta[mc] = meta[mc][ws:wf]
         starting_shard_id += math.ceil(work_size / shard_sample_count) * global_rank
+        device = f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu"
+    else:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
 
     assert output_format in ["files", "webdataset"]
     if output_format == "files":
@@ -100,7 +103,6 @@ def clip_video_encode(
         writer = WebDatasetWriter(dest, 9, "npy", maxcount=shard_sample_count, shard_id=starting_shard_id)
 
     # Initialize model:
-    device = "cuda" if torch.cuda.is_available() else "cpu"
     model, _, preprocess = open_clip.create_model_and_transforms(oc_model_name, pretrained=pretrained, device=device)
     preprocess.transforms = [ToPILImage()] + preprocess.transforms[-3:]
 
