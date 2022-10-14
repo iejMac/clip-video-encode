@@ -57,7 +57,7 @@ def test_utils():
 @pytest.mark.parametrize("oc_model_name", ["ViT-B-32", "ViT-L-14"])
 def test_mapper(oc_model_name):
     # Initialize model:
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cpu"
     model, _, _ = open_clip.create_model_and_transforms(oc_model_name, pretrained="laion400m_e32", device=device)
 
     model_input_shape = (3, 224, 224)
