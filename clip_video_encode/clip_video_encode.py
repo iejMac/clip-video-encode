@@ -119,7 +119,7 @@ def clip_video_encode(
         ind_dict[info["reference"]] = (block_size, block_size + vid_frames.shape[0], info["dst_name"])
         block_size += vid_frames.shape[0]
 
-        if (i % CHUNK_SIZE == 0):
+        if i % CHUNK_SIZE == 0:
             vid_block = np.concatenate(frames)
             dl = block2dl(vid_block, preprocess, BATCH_SIZE, N_DATASET_WORKERS)
 
@@ -139,7 +139,7 @@ def clip_video_encode(
             frames, ind_dict = [], {}
             block_size = 0
 
-    if len(frames) > 0: # TODO: make this cleaner
+    if len(frames) > 0:  # TODO: make this cleaner
         vid_block = np.concatenate(frames)
         dl = block2dl(vid_block, preprocess, BATCH_SIZE, N_DATASET_WORKERS)
 
@@ -158,7 +158,6 @@ def clip_video_encode(
             writer.write(embeddings[i0:it], vid_id, vid_meta)
         frames, ind_dict = [], {}
         block_size = 0
-
 
 
 if __name__ == "__main__":
