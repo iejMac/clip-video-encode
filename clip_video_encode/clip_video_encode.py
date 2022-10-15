@@ -27,6 +27,25 @@ def _convert_image_to_rgb(image):
     return image.convert("RGB")
 
 
+def encode_chunk(frames, ind_dict, writer, mapper, preprocess, meta, ids, use_dst_name, device):
+    vid_block = np.concatenate(frames)
+    dl = block2dl(vid_block, preprocess, BATCH_SIZE, N_DATASET_WORKERS)
+
+    embeddings = []
+    for batch in dl:
+        with torch.no_grad(), torch.cuda.amp.autocast():
+            emb = mapper(batch.to(device))
+            embeddings.append(emb)
+
+    embeddings = np.concatenate(embeddings)
+    for ref, (i0, it, dst_name) in ind_dict.items():
+        vid_id = dst_name[:-4] if use_dst_name else ids[ref]
+        vid_meta = {}
+        for k in meta:
+            vid_meta[k] = meta[k][ref].as_py()
+        writer.write(embeddings[i0:it], vid_id, vid_meta)
+
+
 def clip_video_encode(
     src,
     dest="",
@@ -120,45 +139,11 @@ def clip_video_encode(
         block_size += vid_frames.shape[0]
 
         if i % CHUNK_SIZE == 0:
-            vid_block = np.concatenate(frames)
-            dl = block2dl(vid_block, preprocess, BATCH_SIZE, N_DATASET_WORKERS)
-
-            embeddings = []
-            for batch in dl:
-                with torch.no_grad(), torch.cuda.amp.autocast():
-                    emb = fm(batch.to(device))
-                    embeddings.append(emb)
-
-            embeddings = np.concatenate(embeddings)
-            for ref, (i0, it, dst_name) in ind_dict.items():
-                vid_id = dst_name[:-4] if use_dst_name else ids[ref]
-                vid_meta = {}
-                for k in meta:
-                    vid_meta[k] = meta[k][ref].as_py()
-                writer.write(embeddings[i0:it], vid_id, vid_meta)
-            frames, ind_dict = [], {}
-            block_size = 0
+            encode_chunk(frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device)
+            frames, ind_dict, block_size = [], {}, 0
 
     if len(frames) > 0:  # TODO: make this cleaner
-        vid_block = np.concatenate(frames)
-        dl = block2dl(vid_block, preprocess, BATCH_SIZE, N_DATASET_WORKERS)
-
-        embeddings = []
-        for batch in dl:
-            with torch.no_grad(), torch.cuda.amp.autocast():
-                emb = fm(batch.to(device))
-                embeddings.append(emb)
-
-        embeddings = np.concatenate(embeddings)
-        for ref, (i0, it, dst_name) in ind_dict.items():
-            vid_id = dst_name[:-4] if use_dst_name else ids[ref]
-            vid_meta = {}
-            for k in meta:
-                vid_meta[k] = meta[k][ref].as_py()
-            writer.write(embeddings[i0:it], vid_id, vid_meta)
-        frames, ind_dict = [], {}
-        block_size = 0
-
+        encode_chunk(frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device)
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
