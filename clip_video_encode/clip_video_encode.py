@@ -27,6 +27,26 @@ def _convert_image_to_rgb(image):
     return image.convert("RGB")
 
 
+def encode_chunk(frames, ind_dict, writer, mapper, preprocess, meta, ids, use_dst_name, device):
+    """encodes a chunk of video frames and saves."""
+    vid_block = np.concatenate(frames)
+    dl = block2dl(vid_block, preprocess, BATCH_SIZE, N_DATASET_WORKERS)
+
+    embeddings = []
+    for batch in dl:
+        with torch.no_grad(), torch.cuda.amp.autocast():
+            emb = mapper(batch.to(device))
+            embeddings.append(emb)
+
+    embeddings = np.concatenate(embeddings)
+    for ref, (i0, it, dst_name) in ind_dict.items():
+        vid_id = dst_name[:-4] if use_dst_name else ids[ref]
+        vid_meta = {}
+        for k in meta:
+            vid_meta[k] = meta[k][ref].as_py()
+        writer.write(embeddings[i0:it], vid_id, vid_meta)
+
+
 def clip_video_encode(
     src,
     dest="",
@@ -112,32 +132,19 @@ def clip_video_encode(
 
     frames, ind_dict = [], {}
     block_size = 0
-    i = 1
+    i = 0
     for vid_frames, info in fr:
+        i += 1
         frames.append(vid_frames)
         ind_dict[info["reference"]] = (block_size, block_size + vid_frames.shape[0], info["dst_name"])
         block_size += vid_frames.shape[0]
 
-        if (i % CHUNK_SIZE == 0) or (i == len(fr)):
-            vid_block = np.concatenate(frames)
-            dl = block2dl(vid_block, preprocess, BATCH_SIZE, 12)
+        if i % CHUNK_SIZE == 0:
+            encode_chunk(frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device)
+            frames, ind_dict, block_size = [], {}, 0
 
-            embeddings = []
-            for batch in dl:
-                with torch.no_grad(), torch.cuda.amp.autocast():
-                    emb = fm(batch.to(device))
-                    embeddings.append(emb)
-
-            embeddings = np.concatenate(embeddings)
-            for ref, (i0, it, dst_name) in ind_dict.items():
-                vid_id = dst_name[:-4] if use_dst_name else ids[ref]
-                vid_meta = {}
-                for k in meta:
-                    vid_meta[k] = meta[k][ref].as_py()
-                writer.write(embeddings[i0:it], vid_id, vid_meta)
-            frames, ind_dict = [], {}
-            block_size = 0
-        i += 1
+    if len(frames) > 0:  # TODO: make this cleaner
+        encode_chunk(frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device)
 
 
 if __name__ == "__main__":
