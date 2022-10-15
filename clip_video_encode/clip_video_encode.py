@@ -28,6 +28,7 @@ def _convert_image_to_rgb(image):
 
 
 def encode_chunk(frames, ind_dict, writer, mapper, preprocess, meta, ids, use_dst_name, device):
+    """encodes a chunk of video frames and saves."""
     vid_block = np.concatenate(frames)
     dl = block2dl(vid_block, preprocess, BATCH_SIZE, N_DATASET_WORKERS)
 
