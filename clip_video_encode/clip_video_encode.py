@@ -146,6 +146,7 @@ def clip_video_encode(
     if len(frames) > 0:  # TODO: make this cleaner
         encode_chunk(frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device)
 
+
 if __name__ == "__main__":
     if len(sys.argv) != 4:
         print("Usage: python clip-video-encode.py video.mp4 embeddings.npy take_every_nth")
