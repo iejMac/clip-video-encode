@@ -32,5 +32,10 @@ val_reader = EmbeddingWebDatasetReader(
 
 #  This newly created val_reader is an iterable, so we can iterate through it
 for batch in val_reader:
-    #  Print out the shape of our embeddings
+    #  Print out information about our batch
+    print('=====')
+    print(batch.keys())
     print(batch['embeddings'].shape)
+    print(batch['text'])
+    print(batch['meta'])
+    print('=====')
