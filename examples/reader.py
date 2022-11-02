@@ -5,10 +5,12 @@ EmbeddingWebDatasetReader object.
 In order to follow along, below are instructions to download the dataset used
 in this example.
 
-In a directory of your choice, from the command line call 
+In a directory of your choice, from the command line call:
+
 git clone https://huggingface.co/datasets/iejMac/CLIP-MSR-VTT
 
-Next, cd into the newly created CLIP-MSR-VTT directory and call
+Next, change directory into the newly created CLIP-MSR-VTT/ and call:
+
 git lfs pull
 
 This will load CLIP encodings of the MSR-VTT dataset onto your machine and
