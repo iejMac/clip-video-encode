@@ -8,7 +8,7 @@ open-clip-torch>=2.0.0,<3.0.0
 ffmpeg
 opencv-python
 youtube_dl
-video2numpy==2.3.0
+video2numpy>=2.3.0,<2.4.0
 fsspec==2022.1.0
 pyarrow>=6.0.1,<8
 pandas>=1.1.5,<2
