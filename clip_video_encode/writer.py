@@ -45,7 +45,7 @@ class FileWriter:
 class WebDatasetWriter:
     """Writes output in WebDataset format."""
 
-    def __init__(self, output_folder, oom_shard_count, encode_format, maxcount=10000, shard_id=0):
+    def __init__(self, output_folder, oom_shard_count, encode_format, done_shards=set(), maxcount=10000, shard_id=0):
         self.output_folder = output_folder
         self.oom_shard_count = oom_shard_count
         self.encode_format = encode_format
@@ -89,5 +89,13 @@ class WebDatasetWriter:
 
     def close(self):
         if self.tarwriter is not None:
+            # Write fake stats file to indicate completion
+            fake_stats_key = "{shard_id:0{oom_shard_count}d}".format(  # pylint: disable=consider-using-f-string
+                shard_id=self.shard_id-1, oom_shard_count=self.oom_shard_count
+            )
+            fs, output_path = fsspec.core.url_to_fs(self.output_folder)
+            with fs.open(f"{output_path}/{fake_stats_key}_stats.json", "w") as st:
+                json.dump({"done": True}, st, indent=4)
+
             self.tarwriter.close()
             self.tar_fd.close()

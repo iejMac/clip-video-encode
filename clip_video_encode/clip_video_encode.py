@@ -1,6 +1,7 @@
 """encode video with CLIP"""
 import sys
 
+import fsspec
 import open_clip
 import math
 import numpy as np
@@ -99,7 +100,15 @@ def clip_video_encode(
     meta_refs = list(range(len(vids)))
 
     starting_shard_id = 0
-    shard_sample_count = 10000
+    shard_sample_count = 50
+
+    fs, output_path = fsspec.core.url_to_fs(dest)
+
+    if not fs.exists(output_path): # get done shards
+        fs.mkdir(output_path)
+        done_shards = set()
+    else:
+        done_shards = set(int(x.split("/")[-1].split("_")[0]) for x in fs.glob(output_path + "/*.json"))
 
     if distribute == "slurm":
         local_rank, global_rank, world_size = world_info_from_env()
