@@ -120,6 +120,12 @@ def clip_video_encode(
         for mc in meta.keys():
             meta[mc] = meta[mc][ws:wf]
         starting_shard_id += math.ceil(work_size / shard_sample_count) * global_rank
+        while starting_shard_id in done_shards: # resume up to the last continuous shard
+            starting_shard_id += 1
+            vids = vids[shard_sample_count:]
+            ids = ids[shard_sample_count:]
+            for mc in meta.keys():
+                meta[mc] = meta[mc][shard_sample_count:]
         device = f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu"
     else:
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -134,26 +140,37 @@ def clip_video_encode(
     # Initialize model:
     model, _, preprocess = open_clip.create_model_and_transforms(oc_model_name, pretrained=pretrained, device=device)
     preprocess.transforms = [ToPILImage()] + preprocess.transforms[-3:]
-
     fm = FrameMapper(model, device)
-    fr = FrameReader(vids, meta_refs, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
-    fr.start_reading()
 
-    frames, ind_dict = [], {}
-    block_size = 0
-    i = 0
-    for vid_frames, info in fr:
-        i += 1
-        frames.append(vid_frames)
-        ind_dict[info["reference"]] = (block_size, block_size + vid_frames.shape[0], info["dst_name"])
-        block_size += vid_frames.shape[0]
+    n_shards_to_complete = math.ceil(len(vids) / shard_sample_count)
+    for i in range(n_shards_to_complete): # iterate over shards
+        shard_vids = vids[i * shard_sample_count:(i+1) * shard_sample_count]
+        shard_meta_refs = meta_refs[i * shard_sample_count:(i+1) * shard_sample_count]
+        shard_ids = ids[i * shard_sample_count:(i+1) * shard_sample_count]
+        shard_meta = {}
+        for mc in meta.keys():
+            shard_meta[mc] = meta[mc][i * shard_sample_count:(i+1) * shard_sample_count]
 
-        if i % CHUNK_SIZE == 0:
+        fr = FrameReader(shard_vids, shard_meta_refs, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
+        fr.start_reading()
+
+        frames, ind_dict = [], {}
+        block_size = 0
+        i = 0
+        for vid_frames, info in fr:
+            i += 1
+            frames.append(vid_frames)
+            ind_dict[info["reference"]] = (block_size, block_size + vid_frames.shape[0], info["dst_name"])
+            block_size += vid_frames.shape[0]
+
+            if i % CHUNK_SIZE == 0:
+                encode_chunk(frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device)
+                frames, ind_dict, block_size = [], {}, 0
+
+        if len(frames) > 0:  # TODO: make this cleaner
             encode_chunk(frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device)
-            frames, ind_dict, block_size = [], {}, 0
-
-    if len(frames) > 0:  # TODO: make this cleaner
-        encode_chunk(frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device)
+        # writer.shard_id += 1
+        writer.close()
 
 
 if __name__ == "__main__":
