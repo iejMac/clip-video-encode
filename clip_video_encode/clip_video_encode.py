@@ -143,13 +143,13 @@ def clip_video_encode(
     fm = FrameMapper(model, device)
 
     n_shards_to_complete = math.ceil(len(vids) / shard_sample_count)
-    for i in range(n_shards_to_complete): # iterate over shards
-        shard_vids = vids[i * shard_sample_count:(i+1) * shard_sample_count]
-        shard_meta_refs = meta_refs[i * shard_sample_count:(i+1) * shard_sample_count]
-        shard_ids = ids[i * shard_sample_count:(i+1) * shard_sample_count]
+    for s in range(n_shards_to_complete): # iterate over shards
+        shard_vids = vids[s * shard_sample_count:(s+1) * shard_sample_count]
+        shard_meta_refs = meta_refs[s * shard_sample_count:(s+1) * shard_sample_count]
+        shard_ids = ids[s * shard_sample_count:(s+1) * shard_sample_count]
         shard_meta = {}
         for mc in meta.keys():
-            shard_meta[mc] = meta[mc][i * shard_sample_count:(i+1) * shard_sample_count]
+            shard_meta[mc] = meta[mc][s * shard_sample_count:(s+1) * shard_sample_count]
 
         fr = FrameReader(shard_vids, shard_meta_refs, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
         fr.start_reading()
@@ -169,8 +169,15 @@ def clip_video_encode(
 
         if len(frames) > 0:  # TODO: make this cleaner
             encode_chunk(frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device)
-        # writer.shard_id += 1
-        writer.close()
+
+        if len(frames) < shard_sample_count: # TODO: hack
+            writer.shard_id += 1
+            writer.count = 0
+            if s < n_shards_to_complete - 1:
+                writer.create_shard()
+            else:
+                writer.close()
+    writer.close()
 
 
 if __name__ == "__main__":
