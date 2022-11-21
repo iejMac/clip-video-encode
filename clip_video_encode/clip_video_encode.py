@@ -120,15 +120,17 @@ def clip_video_encode(
         for mc in meta.keys():
             meta[mc] = meta[mc][ws:wf]
         starting_shard_id += math.ceil(work_size / shard_sample_count) * global_rank
-        while starting_shard_id in done_shards: # resume up to the last continuous shard
-            starting_shard_id += 1
-            vids = vids[shard_sample_count:]
-            ids = ids[shard_sample_count:]
-            for mc in meta.keys():
-                meta[mc] = meta[mc][shard_sample_count:]
+
         device = f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu"
     else:
         device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    while starting_shard_id in done_shards: # resume up to the last continuous shard
+        starting_shard_id += 1
+        vids = vids[shard_sample_count:]
+        ids = ids[shard_sample_count:]
+        for mc in meta.keys():
+            meta[mc] = meta[mc][shard_sample_count:]
 
     assert output_format in ["files", "webdataset"]
     if output_format == "files":
