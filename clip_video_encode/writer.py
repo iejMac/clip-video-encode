@@ -45,12 +45,13 @@ class FileWriter:
 class WebDatasetWriter:
     """Writes output in WebDataset format."""
 
-    def __init__(self, output_folder, oom_shard_count, encode_format, maxcount=10000, shard_id=0):
+    def __init__(self, output_folder, oom_shard_count, encode_format, done_shards=set(), maxcount=10000, shard_id=0):
         self.output_folder = output_folder
         self.oom_shard_count = oom_shard_count
         self.encode_format = encode_format
         self.maxcount = maxcount
         self.shard_id = shard_id
+        self.done_shards = done_shards # TODO: hack
 
         self.count = 0
 
@@ -74,6 +75,8 @@ class WebDatasetWriter:
         key = str(key)
         if self.count >= self.maxcount:
             self.shard_id += 1
+            while self.shard_id in self.done_shards: # TODO hack
+                self.shard_id += 1
             self.count = 0
             self.create_shard()
 

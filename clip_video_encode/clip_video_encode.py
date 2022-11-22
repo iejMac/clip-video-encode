@@ -110,48 +110,60 @@ def clip_video_encode(
     else:
         done_shards = set(int(x.split("/")[-1].split("_")[0]) for x in fs.glob(output_path + "/*.json"))
 
+    input_shards = []
+    n_shards = math.ceil(len(vids)/shard_sample_count)
+    for sh in range(n_shards):
+        if sh not in done_shards:
+            i0, it = sh*shard_sample_count, (sh+1)*shard_sample_count 
+            vid_shard = vids[i0:it]
+            meta_ref_shard = meta_refs[i0:it]
+            input_shards.append((sh, vid_shard, meta_ref_shard))
+
     if distribute == "slurm":
         local_rank, global_rank, world_size = world_info_from_env()
-        work_size = math.ceil(len(vids) / world_size)
-        print(f"Slurm worker {global_rank} processing {work_size} videos...")
+        # work_size = math.ceil(len(vids) / world_size)
+        work_size = math.ceil(len(input_shards) / world_size)
+        print(f"Slurm worker {global_rank} processing {work_size} shards of {shard_sample_count} videos each...")
         ws, wf = global_rank * work_size, (global_rank + 1) * work_size
+        shards = input_shards[ws:wf]
+        '''
         vids = vids[ws:wf]
         ids = ids[ws:wf]
-        for mc in meta.keys():
-            meta[mc] = meta[mc][ws:wf]
-        starting_shard_id += math.ceil(work_size / shard_sample_count) * global_rank
-
+        # for mc in meta.keys():
+        #     meta[mc] = meta[mc][ws:wf]
+        '''
+        # starting_shard_id += math.ceil(work_size / shard_sample_count) * global_rank
+        starting_shard_id = shards[0][0]
         device = f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu"
     else:
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
+    '''
     while starting_shard_id in done_shards: # resume up to the last continuous shard
         starting_shard_id += 1
         vids = vids[shard_sample_count:]
         ids = ids[shard_sample_count:]
         for mc in meta.keys():
             meta[mc] = meta[mc][shard_sample_count:]
+    '''
 
     assert output_format in ["files", "webdataset"]
     if output_format == "files":
         writer = FileWriter(dest)
     elif output_format == "webdataset":
         # TODO: maybe include params for this?
-        writer = WebDatasetWriter(dest, 9, "npy", maxcount=shard_sample_count, shard_id=starting_shard_id)
+        writer = WebDatasetWriter(dest, 9, "npy", done_shards, maxcount=shard_sample_count, shard_id=starting_shard_id)
 
     # Initialize model:
     model, _, preprocess = open_clip.create_model_and_transforms(oc_model_name, pretrained=pretrained, device=device)
     preprocess.transforms = [ToPILImage()] + preprocess.transforms[-3:]
     fm = FrameMapper(model, device)
 
-    n_shards_to_complete = math.ceil(len(vids) / shard_sample_count)
-    for s in range(n_shards_to_complete): # iterate over shards
-        shard_vids = vids[s * shard_sample_count:(s+1) * shard_sample_count]
-        shard_meta_refs = meta_refs[s * shard_sample_count:(s+1) * shard_sample_count]
-        shard_ids = ids[s * shard_sample_count:(s+1) * shard_sample_count]
-        shard_meta = {}
-        for mc in meta.keys():
-            shard_meta[mc] = meta[mc][s * shard_sample_count:(s+1) * shard_sample_count]
+    # n_shards_to_complete = math.ceil(len(vids) / shard_sample_count)
+    # for s in range(n_shards_to_complete): # iterate over shards
+    for s_id, shard_vids, shard_meta_refs in shards:
+        # shard_vids = vids[s * shard_sample_count:(s+1) * shard_sample_count]
+        # shard_meta_refs = meta_refs[s * shard_sample_count:(s+1) * shard_sample_count]
 
         fr = FrameReader(shard_vids, shard_meta_refs, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
         fr.start_reading()
@@ -174,8 +186,10 @@ def clip_video_encode(
 
         if len(frames) < shard_sample_count: # TODO: hack
             writer.shard_id += 1
+            while writer.shard_id in done_shards:
+                writer.shard_id += 1
             writer.count = 0
-            if s < n_shards_to_complete - 1:
+            if s_id != shards[-1][0]:
                 writer.create_shard()
             else:
                 writer.close()
