@@ -100,7 +100,7 @@ def clip_video_encode(
     meta_refs = list(range(len(vids)))
 
     starting_shard_id = 0
-    shard_sample_count = 50
+    shard_sample_count = 10000
 
     fs, output_path = fsspec.core.url_to_fs(dest)
 
@@ -126,6 +126,8 @@ def clip_video_encode(
         print(f"Slurm worker {global_rank} processing {work_size} shards of {shard_sample_count} videos each...")
         ws, wf = global_rank * work_size, (global_rank + 1) * work_size
         shards = input_shards[ws:wf]
+        if len(shards) == 0:
+            return
         '''
         vids = vids[ws:wf]
         ids = ids[ws:wf]
