@@ -50,6 +50,7 @@ def encode_chunk(frames, ind_dict, writer, mapper, preprocess, meta, ids, use_ds
 def clip_video_encode(
     src,
     dest="",
+    input_format="table",
     output_format="files",
     take_every_nth=1,
     frame_workers=1,
@@ -116,6 +117,8 @@ def clip_video_encode(
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
     assert output_format in ["files", "webdataset"]
+    assert input_format in ["table", "webdataset"]
+
     if output_format == "files":
         writer = FileWriter(dest)
     elif output_format == "webdataset":
@@ -127,7 +130,10 @@ def clip_video_encode(
     preprocess.transforms = [ToPILImage()] + preprocess.transforms[-3:]
 
     fm = FrameMapper(model, device)
-    fr = FrameReader(vids, meta_refs, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
+    if input_format == "table":
+        fr = FrameReader(vids, meta_refs, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
+    else:
+        fr = WebdatasetFrameReader(vids, meta_refs, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
     fr.start_reading()
 
     frames, ind_dict = [], {}
