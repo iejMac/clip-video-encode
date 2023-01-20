@@ -92,12 +92,16 @@ def clip_video_encode(
       pretrained:
         str: open_clip pretrained weights name
     """
-    if isinstance(metadata_columns, str):
-        metadata_columns = [metadata_columns] if metadata_columns != "" else []
-    metadata_columns = list(metadata_columns) if isinstance(metadata_columns, tuple) else metadata_columns
-    reader = Reader(src, metadata_columns)
-    vids, ids, meta = reader.get_data()
-    meta_refs = list(range(len(vids)))
+    if input_type == "table":
+        if isinstance(metadata_columns, str):
+            metadata_columns = [metadata_columns] if metadata_columns != "" else []
+        metadata_columns = list(metadata_columns) if isinstance(metadata_columns, tuple) else metadata_columns
+        reader = Reader(src, metadata_columns)
+        vids, ids, meta = reader.get_data()
+        meta_refs = list(range(len(vids)))
+    elif input_type == "webdataset":
+        reader = ShardReader(src, metadata_columns)
+        shards = reader.get_data()
 
     starting_shard_id = 0
     shard_sample_count = 10000
@@ -107,10 +111,16 @@ def clip_video_encode(
         work_size = math.ceil(len(vids) / world_size)
         print(f"Slurm worker {global_rank} processing {work_size} videos...")
         ws, wf = global_rank * work_size, (global_rank + 1) * work_size
-        vids = vids[ws:wf]
-        ids = ids[ws:wf]
-        for mc in meta.keys():
-            meta[mc] = meta[mc][ws:wf]
+
+        if input_type == "table":
+            vids = vids[ws:wf]
+            ids = ids[ws:wf]
+            for mc in meta.keys():
+                meta[mc] = meta[mc][ws:wf]
+
+        elif input_type == "webdataset":
+            shards = shards[ws:wf]
+
         starting_shard_id += math.ceil(work_size / shard_sample_count) * global_rank
         device = f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu"
     else:
@@ -133,7 +143,7 @@ def clip_video_encode(
     if input_format == "table":
         fr = FrameReader(vids, meta_refs, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
     else:
-        fr = WebdatasetFrameReader(vids, meta_refs, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
+        fr = WebDatasetFrameReader(shards, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
     fr.start_reading()
 
     frames, ind_dict = [], {}
