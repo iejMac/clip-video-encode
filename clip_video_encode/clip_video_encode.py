@@ -1,5 +1,7 @@
 """encode video with CLIP"""
 import sys
+import subprocess
+import time
 
 import open_clip
 import math
@@ -55,7 +57,7 @@ def encode_chunk(frames, ind_dict, writer, mapper, preprocess, meta, ids, use_ds
         writer.write(embeddings[i0:it], vid_id, vid_meta)
 
 def read_shard(tempdir):
-    vids = [f for f in os.listdir(tempdir) if f.endswith('.mp4')]  # TODO: parameterize the video extension
+    vids = sorted([f for f in os.listdir(tempdir) if f.endswith('.mp4')])  # TODO: parameterize the video extension
     keys = [x.split('.mp4')[0] for x in vids]
 
     meta = []
@@ -129,7 +131,7 @@ def clip_video_encode(
         meta_refs = list(range(len(vids)))
 
     else: # WebDataset, so we distribute shards
-        vids = list(braceexpand.braceexpand(src))
+        shards = list(braceexpand.braceexpand(src))
 
     starting_shard_id = 0
     shard_sample_count = 10000
@@ -137,24 +139,22 @@ def clip_video_encode(
     if distribute == "slurm":
         local_rank, global_rank, world_size = world_info_from_env()
         print(local_rank, global_rank, world_size)
-        work_size = math.ceil(len(vids) / world_size)
-        print(f"Slurm worker {global_rank} processing {work_size} videos...")
-        ws, wf = global_rank * work_size, (global_rank + 1) * work_size
         if input_format == "table":
+            work_size = math.ceil(len(vids) / world_size)
+            print(f"Slurm worker {global_rank} processing {work_size} videos...")
+            ws, wf = global_rank * work_size, (global_rank + 1) * work_size
             vids = vids[ws:wf]
             ids = ids[ws:wf]
             for mc in meta.keys():
                 meta[mc] = meta[mc][ws:wf]
-        elif input_format == "webdataset":
-            shards = vids[ws:wf]
 
-        starting_shard_id += math.ceil(work_size / shard_sample_count) * global_rank
+            starting_shard_id += math.ceil(work_size / shard_sample_count) * global_rank
         device = f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu"
     else:
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
     assert output_format in ["files", "webdataset"]
-
+    print(dest)
     if output_format == "files":
         writer = FileWriter(dest)
     elif output_format == "webdataset":
@@ -187,15 +187,27 @@ def clip_video_encode(
             encode_chunk(frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device)
     else: #WebDataset shard logic
         for shard in shards:
+            times = {}
+            t = time.time()
+            print(f'Rank: {global_rank}, shard: {shard}')
             try:
                 tempdir = tempfile.mkdtemp(prefix=f"worker_{global_rank}_")
                 os.chmod(tempdir, 0o777)
-                import subprocess
                 subprocess.run(["aws", "s3", "cp", shard, tempdir])
                 shard_id = shard.split('/')[-1]
                 tar = tarfile.open(tempdir + '/' + shard_id)
                 tar.extractall(tempdir)
+                times['download_and_extract'] = time.time()-t
+                t = time.time()
                 vids, ids, meta = read_shard(tempdir)
+                if distribute == "slurm":
+                    work_size = math.ceil(len(vids) / world_size)
+                    print(f"Slurm worker {global_rank} processing {work_size} videos...")
+                    ws, wf = global_rank * work_size, (global_rank + 1) * work_size
+                    vids = vids[ws:wf]
+                    ids = ids[ws:wf]
+                    meta = meta[ws:wf]
+                    starting_shard_id += math.ceil(work_size / shard_sample_count) * global_rank
                 meta_refs = list(range(len(vids)))
                 fr = FrameReader(vids, meta_refs, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
                 fr.start_reading()
@@ -212,11 +224,15 @@ def clip_video_encode(
                     if i % CHUNK_SIZE == 0:
                         encode_chunk(frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device)
                         frames, ind_dict, block_size = [], {}, 0
+                times['read_frames'] = time.time()-t
+                t = time.time()
             finally:
                 shutil.rmtree(tempdir)
-
-            if len(frames) > 0:  # TODO: make this cleaner
-                encode_chunk(frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device)
+                if len(frames) > 0:  # TODO: make this cleaner
+                    encode_chunk(frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device)
+                times['encode_remainder'] = time.time() - t
+                t = time.time()
+                print(times)
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
