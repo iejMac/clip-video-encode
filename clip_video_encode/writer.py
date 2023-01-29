@@ -59,19 +59,16 @@ class WebDatasetWriter:
 
         self.create_shard()
 
-    def create_shard(self):
+    def create_shard(self, shard_id=None):
         """create new shard in sequential order."""
         self.close()
+        if shard_id is not None:
         shard_name = "{shard_id:0{oom_shard_count}d}".format(  # pylint: disable=consider-using-f-string
             shard_id=self.shard_id, oom_shard_count=self.oom_shard_count
         )
         fs, output_path = fsspec.core.url_to_fs(self.output_folder)
         self.tar_fd = fs.open(f"{output_path}/{shard_name}.tar", "wb")
         self.tarwriter = wds.TarWriter(self.tar_fd)
-
-    def set_and_create(self, shard_id):
-        self.shard_id = shard_id
-        self.create_shard()
 
     def write(self, arr, key, metadata=None):
         """write sample to current shard."""

@@ -131,24 +131,25 @@ def clip_video_encode(
         meta_refs = list(range(len(vids)))
 
     else: # WebDataset, so we distribute shards
-        vids = list(braceexpand.braceexpand(src))
+        shards = list(braceexpand.braceexpand(src))
 
     starting_shard_id = 0
-    shard_sample_count = 100
-    num_vids_per_input_shard = 1500
+    shard_sample_count = 10000
 
     if distribute == "slurm":
         local_rank, global_rank, world_size = world_info_from_env()
         work_size = math.ceil(len(vids) / world_size)
         print(f"Slurm worker {global_rank} processing {work_size} videos...")
         ws, wf = global_rank * work_size, (global_rank + 1) * work_size
-        vids = vids[ws:wf]
         if input_format == "table":
+            vids = vids[ws:wf]
             ids = ids[ws:wf]
             for mc in meta.keys():
                 meta[mc] = meta[mc][ws:wf]
 
             starting_shard_id += math.ceil(work_size / shard_sample_count) * global_rank
+        elif input_format == "webdataset":
+            shards = shards[ws:wf]
         device = f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu"
     else:
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -187,7 +188,6 @@ def clip_video_encode(
             encode_chunk(frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device)
     else: #WebDataset shard logic
         shard_times = []
-        shards = vids
         for shard in shards:
             times = {}
             t = time.time()
@@ -197,7 +197,7 @@ def clip_video_encode(
                 os.chmod(tempdir, 0o777)
                 subprocess.run(["aws", "s3", "cp", shard, tempdir])
                 shard_id = shard.split('/')[-1]
-                writer.set_and_create(int(shard_id.split('.tar')[0]))
+                writer.create_shard(shard_id=int(shard_id.split('.tar')[0]))
                 tar = tarfile.open(tempdir + '/' + shard_id)
                 tar.extractall(tempdir)
                 times['download_and_extract'] = times.get('download_and_extract', 0) + time.time()-t
@@ -228,6 +228,7 @@ def clip_video_encode(
                 t = time.time()
             finally:
                 shutil.rmtree(tempdir)
+                writer.close()
                 if len(frames) > 0:  # TODO: make this cleaner
                     encode_chunk(frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device)
                 times['encode'] = times.get('encode', 0) + time.time() - t
