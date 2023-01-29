@@ -134,7 +134,8 @@ def clip_video_encode(
         vids = list(braceexpand.braceexpand(src))
 
     starting_shard_id = 0
-    shard_sample_count = 10000
+    shard_sample_count = 100
+    num_vids_per_input_shard = 1500
 
     if distribute == "slurm":
         local_rank, global_rank, world_size = world_info_from_env()
@@ -147,7 +148,7 @@ def clip_video_encode(
             for mc in meta.keys():
                 meta[mc] = meta[mc][ws:wf]
 
-        starting_shard_id += math.ceil(work_size / shard_sample_count) * global_rank
+            starting_shard_id += math.ceil(work_size / shard_sample_count) * global_rank
         device = f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu"
     else:
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -157,7 +158,8 @@ def clip_video_encode(
         writer = FileWriter(dest)
     elif output_format == "webdataset":
         # TODO: maybe include params for this?
-        writer = WebDatasetWriter(dest, 9, "npy", maxcount=shard_sample_count, shard_id=starting_shard_id)
+        starting_shard_id = int(vids[0].split('/')[-1].split('.tar')[0])
+        writer = WebDatasetWriter(dest, 9, "npy", maxcount=1e6, shard_id=starting_shard_id)
 
     # Initialize model:
     model, _, preprocess = open_clip.create_model_and_transforms(oc_model_name, pretrained=pretrained, device=device)
@@ -195,6 +197,7 @@ def clip_video_encode(
                 os.chmod(tempdir, 0o777)
                 subprocess.run(["aws", "s3", "cp", shard, tempdir])
                 shard_id = shard.split('/')[-1]
+                writer.set_and_create(int(shard_id.split('.tar')[0]))
                 tar = tarfile.open(tempdir + '/' + shard_id)
                 tar.extractall(tempdir)
                 times['download_and_extract'] = times.get('download_and_extract', 0) + time.time()-t

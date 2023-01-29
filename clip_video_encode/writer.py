@@ -69,6 +69,10 @@ class WebDatasetWriter:
         self.tar_fd = fs.open(f"{output_path}/{shard_name}.tar", "wb")
         self.tarwriter = wds.TarWriter(self.tar_fd)
 
+    def set_and_create(self, shard_id):
+        self.shard_id = shard_id
+        self.create_shard()
+
     def write(self, arr, key, metadata=None):
         """write sample to current shard."""
         key = str(key)
