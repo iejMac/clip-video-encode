@@ -138,7 +138,7 @@ def clip_video_encode(
 
     if distribute == "slurm":
         local_rank, global_rank, world_size = world_info_from_env()
-        work_size = math.ceil(len(vids) / world_size)
+        work_size = math.ceil(len(vids) / world_size) if input_format == "table" else math.ceil(len(shards) / world_size)
         print(f"Slurm worker {global_rank} processing {work_size} videos...")
         ws, wf = global_rank * work_size, (global_rank + 1) * work_size
         if input_format == "table":
@@ -159,7 +159,7 @@ def clip_video_encode(
         writer = FileWriter(dest)
     elif output_format == "webdataset":
         # TODO: maybe include params for this?
-        starting_shard_id = int(vids[0].split('/')[-1].split('.tar')[0])
+        starting_shard_id = int(shards[0].split('/')[-1].split('.tar')[0])
         writer = WebDatasetWriter(dest, 9, "npy", maxcount=1e6, shard_id=starting_shard_id)
 
     # Initialize model:
@@ -228,7 +228,7 @@ def clip_video_encode(
                 t = time.time()
             finally:
                 shutil.rmtree(tempdir)
-                writer.close()
+                # writer.close()
                 if len(frames) > 0:  # TODO: make this cleaner
                     encode_chunk(frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device)
                 times['encode'] = times.get('encode', 0) + time.time() - t
