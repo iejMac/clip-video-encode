@@ -31,7 +31,6 @@ EMB_DIM = 512
 N_DATASET_WORKERS = 6
 CHUNK_SIZE = 200
 
-
 def _convert_image_to_rgb(image):
     return image.convert("RGB")
 
@@ -78,9 +77,9 @@ def read_shard(tempdir):
 def clip_video_encode(
     src,
     dest="",
-    input_format="table",
     output_format="files",
     take_every_nth=25,
+    input_format="table",
     frame_workers=1,
     frame_memory_size=4,
     metadata_columns="",
@@ -245,4 +244,4 @@ if __name__ == "__main__":
     if len(sys.argv) != 4:
         print("Usage: python clip-video-encode.py video.mp4 embeddings.npy take_every_nth")
         sys.exit(1)
-    clip_video_encode(src=sys.argv[1], dest=sys.argv[2], take_every_nth=int(sys.argv[3]))
+    clip_video_encode(sys.argv[1], sys.argv[2], int(sys.argv[3]))
