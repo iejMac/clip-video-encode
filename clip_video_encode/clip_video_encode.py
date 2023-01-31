@@ -77,9 +77,7 @@ def read_shard(tempdir):
         tempdir:
             path to directory containing contents of an opened WebDataset shard with input data
     """
-    vids = sorted(
-        [f for f in os.listdir(tempdir) if f.endswith(".mp4")]
-    )  # TODO: parameterize the video extension
+    vids = sorted([f for f in os.listdir(tempdir) if f.endswith(".mp4")])  # TODO: parameterize the video extension
     keys = [x.split(".mp4")[0] for x in vids]
 
     meta = []
@@ -146,11 +144,7 @@ def clip_video_encode(
 
     if isinstance(metadata_columns, str):
         metadata_columns = [metadata_columns] if metadata_columns != "" else []
-    metadata_columns = (
-        list(metadata_columns)
-        if isinstance(metadata_columns, tuple)
-        else metadata_columns
-    )
+    metadata_columns = list(metadata_columns) if isinstance(metadata_columns, tuple) else metadata_columns
 
     if input_format == "table":
         reader = Reader(src, metadata_columns)
@@ -190,14 +184,10 @@ def clip_video_encode(
     elif output_format == "webdataset":
         # TODO: maybe include params for this?
         starting_shard_id = int(shards[0].split("/")[-1].split(".tar")[0])
-        writer = WebDatasetWriter(
-            dest, 9, "npy", maxcount=1e6, shard_id=starting_shard_id
-        )
+        writer = WebDatasetWriter(dest, 9, "npy", maxcount=1e6, shard_id=starting_shard_id)
 
     # Initialize model:
-    model, _, preprocess = open_clip.create_model_and_transforms(
-        oc_model_name, pretrained=pretrained, device=device
-    )
+    model, _, preprocess = open_clip.create_model_and_transforms(oc_model_name, pretrained=pretrained, device=device)
     preprocess.transforms = [ToPILImage()] + preprocess.transforms[-3:]
     fm = FrameMapper(model, device)
 
@@ -264,9 +254,7 @@ def clip_video_encode(
                 writer.create_shard(shard_id=int(shard_id.split(".tar")[0]))
                 with tarfile.open(tempdir + "/" + shard_id) as tar:
                     tar.extractall(tempdir)
-                times["download_and_extract"] = (
-                    times.get("download_and_extract", 0) + time.time() - t
-                )
+                times["download_and_extract"] = times.get("download_and_extract", 0) + time.time() - t
                 t = time.time()
                 vids, ids, meta = read_shard(tempdir)
                 meta_refs = list(range(len(vids)))
@@ -341,8 +329,6 @@ def clip_video_encode(
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
-        print(
-            "Usage: python clip-video-encode.py video.mp4 embeddings.npy take_every_nth"
-        )
+        print("Usage: python clip-video-encode.py video.mp4 embeddings.npy take_every_nth")
         sys.exit(1)
     clip_video_encode(sys.argv[1], sys.argv[2], int(sys.argv[3]))
