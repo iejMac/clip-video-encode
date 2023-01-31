@@ -45,7 +45,9 @@ class FileWriter:
 class WebDatasetWriter:
     """Writes output in WebDataset format."""
 
-    def __init__(self, output_folder, oom_shard_count, encode_format, maxcount=10000, shard_id=0):
+    def __init__(
+        self, output_folder, oom_shard_count, encode_format, maxcount=10000, shard_id=0
+    ):
         self.output_folder = output_folder
         self.oom_shard_count = oom_shard_count
         self.encode_format = encode_format

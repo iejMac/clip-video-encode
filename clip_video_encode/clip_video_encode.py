@@ -30,10 +30,23 @@ EMB_DIM = 512
 N_DATASET_WORKERS = 6
 CHUNK_SIZE = 200
 
+
 def _convert_image_to_rgb(image):
     return image.convert("RGB")
 
-def encode_chunk(frames, ind_dict, writer, mapper, preprocess, meta, ids, use_dst_name, device, input_format="table"):
+
+def encode_chunk(
+    frames,
+    ind_dict,
+    writer,
+    mapper,
+    preprocess,
+    meta,
+    ids,
+    use_dst_name,
+    device,
+    input_format="table",
+):
     """encodes a chunk of video frames and saves."""
     vid_block = np.concatenate(frames)
     dl = block2dl(vid_block, preprocess, BATCH_SIZE, N_DATASET_WORKERS)
@@ -55,6 +68,7 @@ def encode_chunk(frames, ind_dict, writer, mapper, preprocess, meta, ids, use_ds
                 vid_meta[k] = meta[k][ref].as_py()
         writer.write(embeddings[i0:it], vid_id, vid_meta)
 
+
 def read_shard(tempdir):
     """
     Extract video filepaths, video ids, and metadata from the contents of an opened WebDataset shard
@@ -63,22 +77,25 @@ def read_shard(tempdir):
         tempdir:
             path to directory containing contents of an opened WebDataset shard with input data
     """
-    vids = sorted([f for f in os.listdir(tempdir) if f.endswith('.mp4')])  # TODO: parameterize the video extension
-    keys = [x.split('.mp4')[0] for x in vids]
+    vids = sorted(
+        [f for f in os.listdir(tempdir) if f.endswith(".mp4")]
+    )  # TODO: parameterize the video extension
+    keys = [x.split(".mp4")[0] for x in vids]
 
     meta = []
     for key in keys:
-        with open(tempdir + '/' + key + '.txt', 'rb') as f:
+        with open(tempdir + "/" + key + ".txt", "rb") as f:
             txt = f.read()
 
-        with open(tempdir + '/' + key + '.json', 'rb') as f:
+        with open(tempdir + "/" + key + ".json", "rb") as f:
             metadata = json.load(f)
 
-        metadata['caption'] = str(txt)
+        metadata["caption"] = str(txt)
         meta.append(metadata)
 
-    vids = [tempdir + '/' + v for v in vids]
+    vids = [tempdir + "/" + v for v in vids]
     return vids, keys, meta
+
 
 def clip_video_encode(
     src,
@@ -129,14 +146,18 @@ def clip_video_encode(
 
     if isinstance(metadata_columns, str):
         metadata_columns = [metadata_columns] if metadata_columns != "" else []
-    metadata_columns = list(metadata_columns) if isinstance(metadata_columns, tuple) else metadata_columns
+    metadata_columns = (
+        list(metadata_columns)
+        if isinstance(metadata_columns, tuple)
+        else metadata_columns
+    )
 
     if input_format == "table":
         reader = Reader(src, metadata_columns)
         vids, ids, meta = reader.get_data()
         meta_refs = list(range(len(vids)))
 
-    else: # WebDataset, so we distribute shards
+    else:  # WebDataset, so we distribute shards
         shards = list(braceexpand.braceexpand(src))
 
     starting_shard_id = 0
@@ -168,11 +189,15 @@ def clip_video_encode(
         writer = FileWriter(dest)
     elif output_format == "webdataset":
         # TODO: maybe include params for this?
-        starting_shard_id = int(shards[0].split('/')[-1].split('.tar')[0])
-        writer = WebDatasetWriter(dest, 9, "npy", maxcount=1e6, shard_id=starting_shard_id)
+        starting_shard_id = int(shards[0].split("/")[-1].split(".tar")[0])
+        writer = WebDatasetWriter(
+            dest, 9, "npy", maxcount=1e6, shard_id=starting_shard_id
+        )
 
     # Initialize model:
-    model, _, preprocess = open_clip.create_model_and_transforms(oc_model_name, pretrained=pretrained, device=device)
+    model, _, preprocess = open_clip.create_model_and_transforms(
+        oc_model_name, pretrained=pretrained, device=device
+    )
     preprocess.transforms = [ToPILImage()] + preprocess.transforms[-3:]
     fm = FrameMapper(model, device)
 
@@ -183,7 +208,7 @@ def clip_video_encode(
             take_every_nth,
             IMG_SIZE,
             workers=frame_workers,
-            memory_size=frame_memory_size
+            memory_size=frame_memory_size,
         )
         fr.start_reading()
 
@@ -193,16 +218,40 @@ def clip_video_encode(
         for vid_frames, info in fr:
             i += 1
             frames.append(vid_frames)
-            ind_dict[info["reference"]] = (block_size, block_size + vid_frames.shape[0], info["dst_name"])
+            ind_dict[info["reference"]] = (
+                block_size,
+                block_size + vid_frames.shape[0],
+                info["dst_name"],
+            )
             block_size += vid_frames.shape[0]
 
             if i % CHUNK_SIZE == 0:
-                encode_chunk(frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device)
+                encode_chunk(
+                    frames,
+                    ind_dict,
+                    writer,
+                    fm,
+                    preprocess,
+                    meta,
+                    ids,
+                    use_dst_name,
+                    device,
+                )
                 frames, ind_dict, block_size = [], {}, 0
 
         if len(frames) > 0:  # TODO: make this cleaner
-            encode_chunk(frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device)
-    else: #WebDataset shard logic
+            encode_chunk(
+                frames,
+                ind_dict,
+                writer,
+                fm,
+                preprocess,
+                meta,
+                ids,
+                use_dst_name,
+                device,
+            )
+    else:  # WebDataset shard logic
         shard_times = []
         for shard in shards:
             times = {}
@@ -211,11 +260,13 @@ def clip_video_encode(
                 tempdir = tempfile.mkdtemp()
                 os.chmod(tempdir, 0o777)
                 subprocess.run(["aws", "s3", "cp", shard, tempdir], check=True)
-                shard_id = shard.split('/')[-1]
-                writer.create_shard(shard_id=int(shard_id.split('.tar')[0]))
-                with tarfile.open(tempdir + '/' + shard_id) as tar:
+                shard_id = shard.split("/")[-1]
+                writer.create_shard(shard_id=int(shard_id.split(".tar")[0]))
+                with tarfile.open(tempdir + "/" + shard_id) as tar:
                     tar.extractall(tempdir)
-                times['download_and_extract'] = times.get('download_and_extract', 0) + time.time()-t
+                times["download_and_extract"] = (
+                    times.get("download_and_extract", 0) + time.time() - t
+                )
                 t = time.time()
                 vids, ids, meta = read_shard(tempdir)
                 meta_refs = list(range(len(vids)))
@@ -225,7 +276,7 @@ def clip_video_encode(
                     take_every_nth,
                     IMG_SIZE,
                     workers=frame_workers,
-                    memory_size=frame_memory_size
+                    memory_size=frame_memory_size,
                 )
                 fr.start_reading()
 
@@ -237,34 +288,61 @@ def clip_video_encode(
                     i += 1
                     n_frames += len(vid_frames)
                     frames.append(vid_frames)
-                    ind_dict[info["reference"]] = (block_size, block_size + vid_frames.shape[0], info["dst_name"])
+                    ind_dict[info["reference"]] = (
+                        block_size,
+                        block_size + vid_frames.shape[0],
+                        info["dst_name"],
+                    )
                     block_size += vid_frames.shape[0]
-                    times['read_frames'] = times.get('read_frames', 0) + time.time()-t
+                    times["read_frames"] = times.get("read_frames", 0) + time.time() - t
                     t = time.time()
 
                     if i % CHUNK_SIZE == 0:
-                        encode_chunk(frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device)
-                        times['encode'] = times.get('encode', 0) + time.time()-t
+                        encode_chunk(
+                            frames,
+                            ind_dict,
+                            writer,
+                            fm,
+                            preprocess,
+                            meta,
+                            ids,
+                            use_dst_name,
+                            device,
+                        )
+                        times["encode"] = times.get("encode", 0) + time.time() - t
                         t = time.time()
                         frames, ind_dict, block_size = [], {}, 0
                 t = time.time()
                 if len(frames) > 0:  # TODO: make this cleaner
-                    encode_chunk(frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device)
-                times['encode'] = times.get('encode', 0) + time.time() - t
+                    encode_chunk(
+                        frames,
+                        ind_dict,
+                        writer,
+                        fm,
+                        preprocess,
+                        meta,
+                        ids,
+                        use_dst_name,
+                        device,
+                    )
+                times["encode"] = times.get("encode", 0) + time.time() - t
                 t = time.time()
             finally:
                 shutil.rmtree(tempdir)
                 # writer.close()
-                print(f'Frames: {n_frames}')
-                print(f'Times: {times}')
-                frame_adjusted = {k: n_frames/v for k, v in times.items()}
-                print(f'Framerates: {frame_adjusted}')
+                print(f"Frames: {n_frames}")
+                print(f"Times: {times}")
+                frame_adjusted = {k: n_frames / v for k, v in times.items()}
+                print(f"Framerates: {frame_adjusted}")
                 shard_time = sum(times.values())
-                print(f'Time for shard: {shard_time}')
+                print(f"Time for shard: {shard_time}")
                 shard_times.append(shard_time)
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
-        print("Usage: python clip-video-encode.py video.mp4 embeddings.npy take_every_nth")
+        print(
+            "Usage: python clip-video-encode.py video.mp4 embeddings.npy take_every_nth"
+        )
         sys.exit(1)
     clip_video_encode(sys.argv[1], sys.argv[2], int(sys.argv[3]))
