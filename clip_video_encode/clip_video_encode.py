@@ -52,6 +52,7 @@ def encode_chunk(frames, ind_dict, writer, mapper, preprocess, meta, ids, use_ds
         if input_format == "webdataset":
             vid_meta = meta[ref]
         else:
+            vid_meta = {}
             for k in meta:
                 vid_meta[k] = meta[k][ref].as_py()
         writer.write(embeddings[i0:it], vid_id, vid_meta)
