@@ -77,7 +77,7 @@ def read_shard(tempdir):
 def clip_video_encode(
     src,
     dest="",
-    input_format="webdataset",
+    input_format="table",
     output_format="files",
     take_every_nth=25,
     frame_workers=1,
@@ -239,7 +239,6 @@ def clip_video_encode(
                 shard_time = sum(times.values())
                 print(f'Time for shard: {shard_time}')
                 shard_times.append(shard_time)
-        print(shard_times)
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
