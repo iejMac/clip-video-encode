@@ -19,7 +19,6 @@ from .distributed import world_info_from_env
 
 import tarfile
 import tempfile
-from tempfile import TemporaryDirectory
 import os
 import json
 import braceexpand
@@ -57,6 +56,13 @@ def encode_chunk(frames, ind_dict, writer, mapper, preprocess, meta, ids, use_ds
         writer.write(embeddings[i0:it], vid_id, vid_meta)
 
 def read_shard(tempdir):
+    """
+    Extract video filepaths, video ids, and metadata from the contents of an opened WebDataset shard
+
+    Input:
+        tempdir:
+            path to directory containing contents of an opened WebDataset shard with input data
+    """
     vids = sorted([f for f in os.listdir(tempdir) if f.endswith('.mp4')])  # TODO: parameterize the video extension
     keys = [x.split('.mp4')[0] for x in vids]
 
@@ -138,7 +144,10 @@ def clip_video_encode(
 
     if distribute == "slurm":
         local_rank, global_rank, world_size = world_info_from_env()
-        work_size = math.ceil(len(vids) / world_size) if input_format == "table" else math.ceil(len(shards) / world_size)
+        if input_format == "table":
+            work_size = math.ceil(len(vids) / world_size)
+        else:
+            work_size = math.ceil(len(shards) / world_size)
         print(f"Slurm worker {global_rank} processing {work_size} videos...")
         ws, wf = global_rank * work_size, (global_rank + 1) * work_size
         if input_format == "table":
@@ -168,7 +177,14 @@ def clip_video_encode(
     fm = FrameMapper(model, device)
 
     if input_format == "table":
-        fr = FrameReader(vids, meta_refs, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
+        fr = FrameReader(
+            vids,
+            meta_refs,
+            take_every_nth,
+            IMG_SIZE,
+            workers=frame_workers,
+            memory_size=frame_memory_size
+        )
         fr.start_reading()
 
         frames, ind_dict = [], {}
@@ -192,9 +208,9 @@ def clip_video_encode(
             times = {}
             t = time.time()
             try:
-                tempdir = tempfile.mkdtemp()
+                tempdir = tempfile.mkdtemp()  # pylint: disable=consider-using-with
                 os.chmod(tempdir, 0o777)
-                subprocess.run(["aws", "s3", "cp", shard, tempdir])
+                subprocess.run(["aws", "s3", "cp", shard, tempdir], check=True)
                 shard_id = shard.split('/')[-1]
                 writer.create_shard(shard_id=int(shard_id.split('.tar')[0]))
                 tar = tarfile.open(tempdir + '/' + shard_id)
@@ -203,7 +219,14 @@ def clip_video_encode(
                 t = time.time()
                 vids, ids, meta = read_shard(tempdir)
                 meta_refs = list(range(len(vids)))
-                fr = FrameReader(vids, meta_refs, take_every_nth, IMG_SIZE, workers=frame_workers, memory_size=frame_memory_size)
+                fr = FrameReader(
+                    vids,
+                    meta_refs,
+                    take_every_nth,
+                    IMG_SIZE,
+                    workers=frame_workers,
+                    memory_size=frame_memory_size
+                )
                 fr.start_reading()
 
                 frames, ind_dict = [], {}
@@ -234,7 +257,7 @@ def clip_video_encode(
                 # writer.close()
                 print(f'Frames: {n_frames}')
                 print(f'Times: {times}')
-                frame_adjusted = {k: n_frames/times[k] for k in times}
+                frame_adjusted = {k: n_frames/v for k, v in times.items()}
                 print(f'Framerates: {frame_adjusted}')
                 shard_time = sum(times.values())
                 print(f'Time for shard: {shard_time}')
