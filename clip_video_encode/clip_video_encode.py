@@ -35,7 +35,7 @@ CHUNK_SIZE = 200
 def _convert_image_to_rgb(image):
     return image.convert("RGB")
 
-def encode_chunk(frames, ind_dict, writer, mapper, preprocess, meta, ids, use_dst_name, device, input_format="webdataset"):
+def encode_chunk(frames, ind_dict, writer, mapper, preprocess, meta, ids, use_dst_name, device, input_format="table"):
     """encodes a chunk of video frames and saves."""
     vid_block = np.concatenate(frames)
     dl = block2dl(vid_block, preprocess, BATCH_SIZE, N_DATASET_WORKERS)
@@ -225,13 +225,13 @@ def clip_video_encode(
                         t = time.time()
                         frames, ind_dict, block_size = [], {}, 0
                 t = time.time()
-            finally:
-                shutil.rmtree(tempdir)
-                # writer.close()
                 if len(frames) > 0:  # TODO: make this cleaner
                     encode_chunk(frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device)
                 times['encode'] = times.get('encode', 0) + time.time() - t
                 t = time.time()
+            finally:
+                shutil.rmtree(tempdir)
+                # writer.close()
                 print(f'Frames: {n_frames}')
                 print(f'Times: {times}')
                 frame_adjusted = {k: n_frames/times[k] for k in times}
