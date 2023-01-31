@@ -191,9 +191,8 @@ def clip_video_encode(
         for shard in shards:
             times = {}
             t = time.time()
-            print(f'Rank: {global_rank}, shard: {shard}')
             try:
-                tempdir = tempfile.mkdtemp(prefix=f"worker_{global_rank}_")
+                tempdir = tempfile.mkdtemp()
                 os.chmod(tempdir, 0o777)
                 subprocess.run(["aws", "s3", "cp", shard, tempdir])
                 shard_id = shard.split('/')[-1]
