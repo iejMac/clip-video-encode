@@ -63,7 +63,7 @@ class WebDatasetWriter:
         """create new shard in sequential order."""
         self.close()
         if shard_id is not None:
-             self.shard_id = shard_id
+            self.shard_id = shard_id
         shard_name = "{shard_id:0{oom_shard_count}d}".format(  # pylint: disable=consider-using-f-string
             shard_id=self.shard_id, oom_shard_count=self.oom_shard_count
         )

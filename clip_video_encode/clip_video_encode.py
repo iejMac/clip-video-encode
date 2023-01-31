@@ -208,13 +208,13 @@ def clip_video_encode(
             times = {}
             t = time.time()
             try:
-                tempdir = tempfile.mkdtemp()  # pylint: disable=consider-using-with
+                tempdir = tempfile.mkdtemp()
                 os.chmod(tempdir, 0o777)
                 subprocess.run(["aws", "s3", "cp", shard, tempdir], check=True)
                 shard_id = shard.split('/')[-1]
                 writer.create_shard(shard_id=int(shard_id.split('.tar')[0]))
-                tar = tarfile.open(tempdir + '/' + shard_id)
-                tar.extractall(tempdir)
+                with tarfile.open(tempdir + '/' + shard_id) as tar:
+                    tar.extractall(tempdir)
                 times['download_and_extract'] = times.get('download_and_extract', 0) + time.time()-t
                 t = time.time()
                 vids, ids, meta = read_shard(tempdir)
