@@ -217,31 +217,13 @@ def clip_video_encode(
 
             if i % CHUNK_SIZE == 0:
                 encode_chunk(
-                    frames,
-                    ind_dict,
-                    writer,
-                    fm,
-                    preprocess,
-                    meta,
-                    ids,
-                    use_dst_name,
-                    device,
-                    input_format=input_format
+                    frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device, input_format=input_format
                 )
                 frames, ind_dict, block_size = [], {}, 0
 
         if len(frames) > 0:  # TODO: make this cleaner
             encode_chunk(
-                frames,
-                ind_dict,
-                writer,
-                fm,
-                preprocess,
-                meta,
-                ids,
-                use_dst_name,
-                device,
-                input_format=input_format
+                frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device, input_format=input_format
             )
     else:  # WebDataset shard logic
         shard_times = []
