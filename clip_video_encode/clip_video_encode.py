@@ -226,6 +226,7 @@ def clip_video_encode(
                     ids,
                     use_dst_name,
                     device,
+                    input_format=input_format
                 )
                 frames, ind_dict, block_size = [], {}, 0
 
@@ -240,6 +241,7 @@ def clip_video_encode(
                 ids,
                 use_dst_name,
                 device,
+                input_format=input_format
             )
     else:  # WebDataset shard logic
         shard_times = []
@@ -247,10 +249,12 @@ def clip_video_encode(
             times = {}
             t = time.time()
             try:
-                tempdir = tempfile.mkdtemp()
+                tempdir = tempfile.mkdtemp(prefix=f"worker_{global_rank}_")
                 os.chmod(tempdir, 0o777)
                 subprocess.run(["aws", "s3", "cp", shard, tempdir], check=True)
                 shard_id = shard.split("/")[-1]
+                print(tempdir)
+                print(tempdir + "/" + shard_id)
                 writer.create_shard(shard_id=int(shard_id.split(".tar")[0]))
                 with tarfile.open(tempdir + "/" + shard_id) as tar:
                     tar.extractall(tempdir)
@@ -296,6 +300,7 @@ def clip_video_encode(
                             ids,
                             use_dst_name,
                             device,
+                            input_format=input_format,
                         )
                         times["encode"] = times.get("encode", 0) + time.time() - t
                         t = time.time()
@@ -312,6 +317,7 @@ def clip_video_encode(
                         ids,
                         use_dst_name,
                         device,
+                        input_format=input_format,
                     )
                 times["encode"] = times.get("encode", 0) + time.time() - t
                 t = time.time()
