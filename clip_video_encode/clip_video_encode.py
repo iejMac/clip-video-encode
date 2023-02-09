@@ -78,8 +78,8 @@ def read_shard(tempdir):
             path to directory containing contents of an opened WebDataset shard with input data
     """
     vids = sorted(
-               [f.split("/")[-1] for f in glob.glob(tempdir + "/" + "*.mp4")]
-           )  # TODO: parameterize the video extension
+        [f.split("/")[-1] for f in glob.glob(tempdir + "/" + "*.mp4")]
+    )  # TODO: parameterize the video extension
     keys = [x.split(".mp4")[0] for x in vids]
     meta = []
     for key in keys:
@@ -303,8 +303,7 @@ def clip_video_encode(
                 times["encode"] = times.get("encode", 0) + time.time() - t
                 t = time.time()
             frame_adjusted = {k: n_frames / v for k, v in times.items()}
-            print(f'Frames/s: {frame_adjusted}')
-
+            print(f"Frames/s: {frame_adjusted}")
 
 
 if __name__ == "__main__":
