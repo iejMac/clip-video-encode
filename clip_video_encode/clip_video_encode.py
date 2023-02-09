@@ -1,6 +1,5 @@
 """encode video with CLIP"""
 import sys
-import subprocess
 import time
 
 import open_clip
@@ -23,6 +22,8 @@ import os
 import json
 import braceexpand
 import glob
+import fsspec
+import io
 
 BATCH_SIZE = 256
 IMG_SIZE = 224
@@ -232,12 +233,14 @@ def clip_video_encode(
             t = time.time()
             with tempfile.TemporaryDirectory(prefix=f"worker_{global_rank}_") as tempdir:
                 os.chmod(tempdir, 0o777)  # This lets subprocesses from v2np read files in the tempdir
-                subprocess.run(["aws", "s3", "cp", shard, tempdir], check=True)
-                shard_id = shard.split("/")[-1]
+                folder = '/'.join(shard.split("/")[0:-1])
+                fs, output_path = fsspec.core.url_to_fs(folder)
 
-                writer.create_shard(shard_id=int(shard_id.split(".tar")[0]))
-                with tarfile.open(tempdir + "/" + shard_id) as tar:
+                shard_id = shard.split("/")[-1]
+                tar_bytes = io.BytesIO(fs.open(f"{output_path}/{shard_id}").read())
+                with tarfile.open(fileobj=tar_bytes) as tar:
                     tar.extractall(tempdir)
+                writer.create_shard(shard_id=int(shard_id.split(".tar")[0]))
                 times["download_and_extract"] = times.get("download_and_extract", 0) + time.time() - t
                 t = time.time()
                 vids, ids, meta = read_shard(tempdir)
