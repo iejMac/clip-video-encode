@@ -233,7 +233,7 @@ def clip_video_encode(
             t = time.time()
             with tempfile.TemporaryDirectory(prefix=f"worker_{global_rank}_") as tempdir:
                 os.chmod(tempdir, 0o777)  # This lets subprocesses from v2np read files in the tempdir
-                folder = '/'.join(shard.split("/")[0:-1])
+                folder = "/".join(shard.split("/")[0:-1])
                 fs, output_path = fsspec.core.url_to_fs(folder)
 
                 shard_id = shard.split("/")[-1]
