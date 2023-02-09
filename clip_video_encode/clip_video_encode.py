@@ -230,9 +230,8 @@ def clip_video_encode(
         for shard in shards:
             times = {}
             t = time.time()
-            try:
-                tempdir = tempfile.mkdtemp(prefix=f"worker_{global_rank}_")
-                os.chmod(tempdir, 0o777)
+            with tempfile.TemporaryDirectory(prefix=f"worker_{global_rank}_") as tempdir:
+                os.chmod(tempdir, 0o777)  # This lets subprocesses from v2np read files in the tempdir
                 subprocess.run(["aws", "s3", "cp", shard, tempdir], check=True)
                 shard_id = shard.split("/")[-1]
                 print(tempdir)
@@ -303,16 +302,9 @@ def clip_video_encode(
                     )
                 times["encode"] = times.get("encode", 0) + time.time() - t
                 t = time.time()
-            finally:
-                shutil.rmtree(tempdir)
-                # writer.close()
-                print(f"Frames: {n_frames}")
-                print(f"Times: {times}")
-                frame_adjusted = {k: n_frames / v for k, v in times.items()}
-                print(f"Framerates: {frame_adjusted}")
-                shard_time = sum(times.values())
-                print(f"Time for shard: {shard_time}")
-                shard_times.append(shard_time)
+            frame_adjusted = {k: n_frames / v for k, v in times.items()}
+            print(f'Frames/s: {frame_adjusted}')
+
 
 
 if __name__ == "__main__":
