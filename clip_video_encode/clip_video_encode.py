@@ -23,6 +23,7 @@ import os
 import json
 import braceexpand
 import shutil
+import glob
 
 BATCH_SIZE = 256
 IMG_SIZE = 224
@@ -77,9 +78,8 @@ def read_shard(tempdir):
         tempdir:
             path to directory containing contents of an opened WebDataset shard with input data
     """
-    vids = sorted([f for f in os.listdir(tempdir) if f.endswith(".mp4")])  # TODO: parameterize the video extension
+    vids = sorted([f.split("/")[-1] for f in glob.glob(tempdir + "/" + "*.mp4")])  # TODO: parameterize the video extension
     keys = [x.split(".mp4")[0] for x in vids]
-
     meta = []
     for key in keys:
         with open(tempdir + "/" + key + ".txt", "rb") as f:
