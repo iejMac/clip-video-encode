@@ -234,8 +234,7 @@ def clip_video_encode(
                 os.chmod(tempdir, 0o777)  # This lets subprocesses from v2np read files in the tempdir
                 subprocess.run(["aws", "s3", "cp", shard, tempdir], check=True)
                 shard_id = shard.split("/")[-1]
-                print(tempdir)
-                print(tempdir + "/" + shard_id)
+
                 writer.create_shard(shard_id=int(shard_id.split(".tar")[0]))
                 with tarfile.open(tempdir + "/" + shard_id) as tar:
                     tar.extractall(tempdir)
