@@ -33,6 +33,11 @@ class FileWriter:
                 with self.fs.open(caption_filename, "w") as f:
                     f.write(caption)
             if len(metadata) > 0:
+                if "mp4_video" in metadata:
+                    vid_bytes = metadata.pop("mp4_video")
+                    vid_filename = os.path.join(self.output_folder, key + ".mp4")
+                    with self.fs.open(vid_filename, "w") as f:
+                        f.write(vid_bytes)
                 j = json.dumps(metadata, indent=4)
                 meta_filename = os.path.join(self.output_folder, key + ".json")
                 with self.fs.open(meta_filename, "w") as f:
@@ -84,6 +89,9 @@ class WebDatasetWriter:
             if "caption" in metadata:
                 sample["txt"] = str(metadata.pop("caption"))
             if len(metadata) > 0:
+                if "mp4_video" in metadata:
+                    vid_bytes = metadata.pop("mp4_video")
+                    sample["mp4"] = vid_bytes
                 sample["json"] = json.dumps(metadata, indent=4)
 
         self.tarwriter.write(sample)

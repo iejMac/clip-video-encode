@@ -70,7 +70,7 @@ def encode_chunk(
         writer.write(embeddings[i0:it], vid_id, vid_meta)
 
 
-def read_shard(tempdir):
+def read_shard(tempdir, read_mp4=False):
     """
     Extract video filepaths, video ids, and metadata from the contents of an opened WebDataset shard
 
@@ -89,6 +89,11 @@ def read_shard(tempdir):
 
         with open(tempdir + "/" + key + ".json", "rb") as f:
             metadata = json.load(f)
+
+        if read_mp4:
+            with open(tempdir + "/" + key + ".mp4", "rb") as f:
+                mp4_video = f.read()
+                metadata["mp4_video"] = mp4_video
 
         metadata["caption"] = str(txt)
         meta.append(metadata)
@@ -110,6 +115,7 @@ def clip_video_encode(
     distribute="none",
     oc_model_name="ViT-B-32",
     pretrained="laion2b_s34b_b79k",
+    pass_through_mp4=False,
 ):
     """
     Encode frames using CLIP image encoder
@@ -141,6 +147,8 @@ def clip_video_encode(
         str: open_clip model name, used for selecting CLIP architecture
       pretrained:
         str: open_clip pretrained weights name
+      pass_through_mp4:
+        bool: whether to save the mp4 in the sample as well
     """
     assert input_format in ["table", "webdataset"]
 
@@ -178,6 +186,7 @@ def clip_video_encode(
             shards = shards[ws:wf]
         device = f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu"
     else:
+        local_rank, global_rank, world_size = 0, 0, 1 # TODO: how do we do this?
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
     assert output_format in ["files", "webdataset"]
@@ -243,7 +252,7 @@ def clip_video_encode(
                 writer.create_shard(shard_id=int(shard_id.split(".tar")[0]))
                 times["download_and_extract"] = times.get("download_and_extract", 0) + time.time() - t
                 t = time.time()
-                vids, ids, meta = read_shard(tempdir)
+                vids, ids, meta = read_shard(tempdir, read_mp4=pass_through_mp4)
                 meta_refs = list(range(len(vids)))
                 fr = FrameReader(
                     vids,
