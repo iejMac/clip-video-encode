@@ -20,11 +20,22 @@ class FileWriter:
     def write(self, arr, key, metadata=None):
         """write sample to file."""
         key = str(key)
-        save_pth = os.path.join(self.output_folder, key + ".npy")
-        with self.fs.open(save_pth, "wb") as f:
-            nbp = BytesIO()
-            np.save(nbp, arr)
-            f.write(nbp.getbuffer())
+
+        if metadata is not None and "numpy_metadata" in metadata:
+            save_pth = os.path.join(self.output_folder, key + ".npz")
+            np_metadata = metadata.pop("numpy_metadata")
+            np_metadata["clip_embeddings"] = arr
+
+            with self.fs.open(save_pth, "wb") as f:
+                nbp = BytesIO()
+                np.savez(nbp, np_metadata)
+                f.write(nbp.getbuffer())
+        else:
+            save_pth = os.path.join(self.output_folder, key + ".npy")
+            with self.fs.open(save_pth, "wb") as f:
+                nbp = BytesIO()
+                np.save(nbp, arr)
+                f.write(nbp.getbuffer())
 
         if metadata is not None:
             if "caption" in metadata:
@@ -84,7 +95,14 @@ class WebDatasetWriter:
             self.count = 0
             self.create_shard()
 
-        sample = {"__key__": key, self.encode_format: arr}
+        sample = {"__key__": key}
+        if metadata is not None and "numpy_metadata" in metadata:
+            numpy_metadata = metadata.pop("numpy_metadata")
+            # TODO: maybe add model type
+            numpy_metadata["clip_embeddings"] = arr
+            sample["npz"] = numpy_metadata
+        else:
+            sample[self.encode_format] = arr
         if metadata is not None:
             if "caption" in metadata:
                 sample["txt"] = str(metadata.pop("caption"))
