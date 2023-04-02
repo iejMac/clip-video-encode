@@ -5,6 +5,7 @@ import open_clip
 
 
 class FrameMapper:
+    """maps frames -> embeddings (or captions"""
     def __init__(self, model, device):
         self.model = model
         self.device = device
