@@ -15,6 +15,7 @@ class FrameMapper:
         return embeddings
 
     def generate_captions(self, batch):
+        # TODO: idk if this is the best way to do it but works for now
         with torch.no_grad(), torch.cuda.amp.autocast():
             generated = self.model.generate(batch)
         captions = [open_clip.decode(gen).split("<end_of_text>")[0].replace("<start_of_text>", "") for gen in generated]
