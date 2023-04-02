@@ -192,7 +192,7 @@ def clip_video_encode(
             shards = shards[ws:wf]
         device = f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu"
     else:
-        local_rank, global_rank, world_size = 0, 0, 1 # TODO: how do we do this?
+        local_rank, global_rank, world_size = 0, 0, 1  # TODO: how do we do this?
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
     assert output_format in ["files", "webdataset"]
