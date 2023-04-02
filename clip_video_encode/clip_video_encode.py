@@ -304,7 +304,7 @@ def clip_video_encode(
                     i += 1
 
                     if captioning_strategy == "center":
-                        vid_frames = vid_frames[len(vid_frames)//2:len(vid_frames)//2 + 1]
+                        vid_frames = vid_frames[len(vid_frames) // 2 : len(vid_frames) // 2 + 1]
 
                     n_frames += len(vid_frames)
                     frames.append(vid_frames)
