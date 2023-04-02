@@ -99,9 +99,10 @@ class WebDatasetWriter:
         if metadata is not None and "numpy_metadata" in metadata:
             numpy_metadata = metadata.pop("numpy_metadata")
             # TODO: maybe add model type
-            numpy_metadata["clip_embeddings"] = arr
+            if arr is not None:
+                numpy_metadata["clip_embeddings"] = arr
             sample["npz"] = numpy_metadata
-        else:
+        elif arr is not None:
             sample[self.encode_format] = arr
         if metadata is not None:
             if "caption" in metadata:
