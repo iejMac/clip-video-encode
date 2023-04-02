@@ -1,6 +1,7 @@
 """simplemapper - simple frame -> embedding mapper."""
-
 import torch
+
+import open_clip
 
 
 class FrameMapper:
@@ -12,3 +13,9 @@ class FrameMapper:
         with torch.no_grad():
             embeddings = self.model.encode_image(batch).cpu().detach().numpy()
         return embeddings
+
+    def generate_captions(self, batch):
+        with torch.no_grad(), torch.cuda.amp.autocast():
+            generated = self.model.generate(batch)
+        captions = [open_clip.decode(gen).split("<end_of_text>")[0].replace("<start_of_text>", "") for gen in generated]
+        return captions
