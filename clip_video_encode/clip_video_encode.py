@@ -25,8 +25,7 @@ import glob
 import fsspec
 import io
 
-# BATCH_SIZE = 256
-BATCH_SIZE = 8
+BATCH_SIZE = 256
 IMG_SIZE = 224
 EMB_DIM = 512
 N_DATASET_WORKERS = 6
