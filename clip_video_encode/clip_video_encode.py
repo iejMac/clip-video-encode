@@ -102,15 +102,23 @@ def read_shard(tempdir, read_mp4=False):
     )  # TODO: parameterize the video extension
 
     has_npz = len(glob.glob(tempdir + "/" + "*.npz")) > 0
+    has_txt = len(glob.glob(tempdir + "/" + "*.txt")) > 0
+    has_json = len(glob.glob(tempdir + "/" + "*.json")) > 0
 
     keys = [x.split(".mp4")[0] for x in vids]
     meta = []
     for key in keys:
-        with open(tempdir + "/" + key + ".txt", "rb") as f:
-            txt = f.read()
+        if has_json:
+            with open(tempdir + "/" + key + ".json", "rb") as f:
+                metadata = json.load(f)
+        else:
+            metadata = {}
 
-        with open(tempdir + "/" + key + ".json", "rb") as f:
-            metadata = json.load(f)
+        if has_txt:
+            with open(tempdir + "/" + key + ".txt", "rb") as f:
+                txt = f.read()
+            metadata["caption"] = str(txt)
+
 
         if read_mp4:
             with open(tempdir + "/" + key + ".mp4", "rb") as f:
@@ -120,7 +128,6 @@ def read_shard(tempdir, read_mp4=False):
             np_metadata = dict(np.load(tempdir + "/" + key + ".npz"))
             metadata["numpy_metadata"] = np_metadata
 
-        metadata["caption"] = str(txt)
         meta.append(metadata)
 
     vids = [tempdir + "/" + v for v in vids]
