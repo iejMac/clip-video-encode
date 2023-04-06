@@ -135,7 +135,7 @@ def read_shard(tempdir, read_mp4=False):
             metadata = {}
 
         if has_txt:
-            with open(tempdir + "/" + key + ".txt", "r") as f:
+            with open(tempdir + "/" + key + ".txt", "r", encoding="UTF-8") as f:
                 txt = f.read()
             metadata["caption"] = txt
 
