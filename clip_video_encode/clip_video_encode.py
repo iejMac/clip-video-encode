@@ -60,6 +60,15 @@ def encode_chunk(
                 emb = mapper(batch.to(device))
                 embeddings.append(emb)
 
+        caption_embs = None
+        if mapper.tokenizer is not None:
+            # TODO: is there a better way of doing this?
+            for m in meta:
+                m["caption"] = m["caption"] if "caption" in m else ""
+
+            captions = [m["caption"] for m in meta]
+            caption_embs = mapper.encode_captions(captions)
+
         embeddings = np.concatenate(embeddings)
         for ref, (i0, it, dst_name) in ind_dict.items():
             vid_id = dst_name[:-4] if use_dst_name else ids[ref]
@@ -69,7 +78,18 @@ def encode_chunk(
                 vid_meta = {}
                 for k in meta:
                     vid_meta[k] = meta[k][ref].as_py()
-            writer.write(embeddings[i0:it], vid_id, vid_meta)
+
+            frame_embeddings = embeddings[i0:it]
+            if caption_embs is not None:
+                # normalize
+                fe = frame_embeddings / np.linalg.norm(frame_embeddings, axis=-1)[:, None]
+                ce = caption_embs[ref] / np.linalg.norm(caption_embs[ref])
+
+                sim = (fe @ ce.T).tolist()
+
+                vid_meta["clip_frame_similarity"] = sim
+
+            writer.write(frame_embeddings, vid_id, vid_meta)
     else:
         captions = []
         for batch in dl:
@@ -115,10 +135,9 @@ def read_shard(tempdir, read_mp4=False):
             metadata = {}
 
         if has_txt:
-            with open(tempdir + "/" + key + ".txt", "rb") as f:
+            with open(tempdir + "/" + key + ".txt", "r") as f:
                 txt = f.read()
-            metadata["caption"] = str(txt)
-
+            metadata["caption"] = txt
 
         if read_mp4:
             with open(tempdir + "/" + key + ".mp4", "rb") as f:
@@ -149,6 +168,7 @@ def clip_video_encode(
     pretrained="laion2b_s34b_b79k",
     captioning_strategy="none",
     pass_through_mp4=False,
+    caption_similarity=False,
 ):
     """
     Encode frames using CLIP image encoder
@@ -187,6 +207,8 @@ def clip_video_encode(
         int: (NOT IMPLEMENTED) step size for which frames to generate captions for
       pass_through_mp4:
         bool: whether to save the mp4 in the sample as well
+      caption_similarity:
+        bool: whether to put the similarity between the average frame embedding and text embedding into metadata
     """
     assert input_format in ["table", "webdataset"]
 
@@ -237,8 +259,9 @@ def clip_video_encode(
 
     # Initialize model:
     model, _, preprocess = open_clip.create_model_and_transforms(oc_model_name, pretrained=pretrained, device=device)
+    tokenizer = open_clip.get_tokenizer(oc_model_name)
     preprocess.transforms = [ToPILImage()] + preprocess.transforms[-3:]
-    fm = FrameMapper(model, device)
+    fm = FrameMapper(model, device, tokenizer=tokenizer if caption_similarity else None)
 
     if input_format == "table":
         fr = FrameReader(
