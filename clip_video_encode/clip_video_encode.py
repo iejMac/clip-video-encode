@@ -47,46 +47,27 @@ def encode_chunk(
     use_dst_name,
     device,
     input_format="table",
-    captioning_strategy="none",
 ):
     """encodes a chunk of video frames and saves."""
     vid_block = np.concatenate(frames)
     dl = block2dl(vid_block, preprocess, BATCH_SIZE, N_DATASET_WORKERS)
 
-    if captioning_strategy == "none":
-        embeddings = []
-        for batch in dl:
-            with torch.no_grad(), torch.cuda.amp.autocast():
-                emb = mapper(batch.to(device))
-                embeddings.append(emb)
+    embeddings = []
+    for batch in dl:
+        with torch.no_grad(), torch.cuda.amp.autocast():
+            emb = mapper(batch.to(device))
+            embeddings.append(emb)
 
-        embeddings = np.concatenate(embeddings)
-        for ref, (i0, it, dst_name) in ind_dict.items():
-            vid_id = dst_name[:-4] if use_dst_name else ids[ref]
-            if input_format == "webdataset":
-                vid_meta = meta[ref]
-            else:
-                vid_meta = {}
-                for k in meta:
-                    vid_meta[k] = meta[k][ref].as_py()
-            writer.write(embeddings[i0:it], vid_id, vid_meta)
-    else:
-        captions = []
-        for batch in dl:
-            captions += mapper.generate_captions(batch.to(device))
-
-        for ref, (i0, it, dst_name) in ind_dict.items():
-            vid_id = dst_name[:-4] if use_dst_name else ids[ref]
-            if input_format == "webdataset":
-                vid_meta = meta[ref]
-            else:
-                vid_meta = {}
-                for k in meta:
-                    vid_meta[k] = meta[k][ref].as_py()
-
-            vid_meta["generated_caption"] = captions[i0:it]
-            # TODO: we should be able to do both at once with a CoCa model
-            writer.write(None, vid_id, vid_meta)
+    embeddings = np.concatenate(embeddings)
+    for ref, (i0, it, dst_name) in ind_dict.items():
+        vid_id = dst_name[:-4] if use_dst_name else ids[ref]
+        if input_format == "webdataset":
+            vid_meta = meta[ref]
+        else:
+            vid_meta = {}
+            for k in meta:
+                vid_meta[k] = meta[k][ref].as_py()
+        writer.write(embeddings[i0:it], vid_id, vid_meta)
 
 
 def read_shard(tempdir, read_mp4=False):
@@ -102,15 +83,23 @@ def read_shard(tempdir, read_mp4=False):
     )  # TODO: parameterize the video extension
 
     has_npz = len(glob.glob(tempdir + "/" + "*.npz")) > 0
+    has_txt = len(glob.glob(tempdir + "/" + "*.txt")) > 0
+    has_json = len(glob.glob(tempdir + "/" + "*.json")) > 0
+    print(has_txt, has_json)
 
     keys = [x.split(".mp4")[0] for x in vids]
     meta = []
     for key in keys:
-        with open(tempdir + "/" + key + ".txt", "rb") as f:
-            txt = f.read()
+        if has_json:
+            with open(tempdir + "/" + key + ".json", "rb") as f:
+                metadata = json.load(f)
+        else:
+            metadata = {}
 
-        with open(tempdir + "/" + key + ".json", "rb") as f:
-            metadata = json.load(f)
+        if has_txt:
+            with open(tempdir + "/" + key + ".txt", "rb") as f:
+                txt = f.read()
+            metadata["caption"] = str(txt)
 
         if read_mp4:
             with open(tempdir + "/" + key + ".mp4", "rb") as f:
@@ -120,7 +109,6 @@ def read_shard(tempdir, read_mp4=False):
             np_metadata = dict(np.load(tempdir + "/" + key + ".npz"))
             metadata["numpy_metadata"] = np_metadata
 
-        metadata["caption"] = str(txt)
         meta.append(metadata)
 
     vids = [tempdir + "/" + v for v in vids]
@@ -140,7 +128,6 @@ def clip_video_encode(
     distribute="none",
     oc_model_name="ViT-B-32",
     pretrained="laion2b_s34b_b79k",
-    captioning_strategy="none",
     pass_through_mp4=False,
 ):
     """
@@ -173,11 +160,6 @@ def clip_video_encode(
         str: open_clip model name, used for selecting CLIP architecture
       pretrained:
         str: open_clip pretrained weights name
-      captioning_strategy:
-        str: which frames of a video to generate captions for. Possible values are:
-          - none: don't generate any captions
-          - center: generate a caption for the middle frame
-        int: (NOT IMPLEMENTED) step size for which frames to generate captions for
       pass_through_mp4:
         bool: whether to save the mp4 in the sample as well
     """
@@ -301,10 +283,6 @@ def clip_video_encode(
                 n_frames = 0
                 for vid_frames, info in fr:
                     i += 1
-
-                    if captioning_strategy == "center":
-                        vid_frames = vid_frames[len(vid_frames) // 2 : len(vid_frames) // 2 + 1]
-
                     n_frames += len(vid_frames)
                     frames.append(vid_frames)
                     ind_dict[info["reference"]] = (
@@ -328,7 +306,6 @@ def clip_video_encode(
                             use_dst_name,
                             device,
                             input_format=input_format,
-                            captioning_strategy=captioning_strategy,
                         )
                         times["encode"] = times.get("encode", 0) + time.time() - t
                         t = time.time()
@@ -346,7 +323,6 @@ def clip_video_encode(
                         use_dst_name,
                         device,
                         input_format=input_format,
-                        captioning_strategy=captioning_strategy,
                     )
                 times["encode"] = times.get("encode", 0) + time.time() - t
                 t = time.time()
