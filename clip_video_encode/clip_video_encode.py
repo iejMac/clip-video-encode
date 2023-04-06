@@ -63,11 +63,10 @@ def encode_chunk(
         caption_embs = None
         if mapper.tokenizer is not None:
             # TODO: is there a better way of doing this?
-            for m in meta:
-                m["caption"] = m["caption"] if "caption" in m else ""
-
-            captions = [m["caption"] for m in meta]
+            # here we will compute similarity of empty string...
+            captions = [m["caption"] if "caption" in m else "" for m in meta]
             caption_embs = mapper.encode_captions(captions)
+            caption_embs = caption_embs / np.linalg.norm(caption_embs, axis=-1)[:, None]
 
         embeddings = np.concatenate(embeddings)
         for ref, (i0, it, dst_name) in ind_dict.items():
@@ -83,7 +82,7 @@ def encode_chunk(
             if caption_embs is not None:
                 # normalize
                 fe = frame_embeddings / np.linalg.norm(frame_embeddings, axis=-1)[:, None]
-                ce = caption_embs[ref] / np.linalg.norm(caption_embs[ref])
+                ce = caption_embs[ref]
 
                 sim = (fe @ ce.T).tolist()
 
