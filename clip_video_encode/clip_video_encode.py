@@ -114,7 +114,7 @@ def encode_chunk(
             writer.write(None, vid_id, vid_meta)
 
 
-def read_shard(tempdir, read_mp4=False):
+def read_shard(tempdir, read_mp4=False, read_m4a=False):
     """
     Extract video filepaths, video ids, and metadata from the contents of an opened WebDataset shard
 
@@ -148,6 +148,10 @@ def read_shard(tempdir, read_mp4=False):
             with open(tempdir + "/" + key + ".mp4", "rb") as f:
                 mp4_video = f.read()
                 metadata["mp4_video"] = mp4_video
+        if read_m4a:
+            with open(tempdir + "/" + key + ".m4a", "rb") as f:
+                m4a_audio = f.read()
+                metadata["m4a_audio"] = m4a_audio
         if has_npz:
             np_metadata = dict(np.load(tempdir + "/" + key + ".npz"))
             metadata["numpy_metadata"] = np_metadata
@@ -173,6 +177,7 @@ def clip_video_encode(
     pretrained="laion2b_s34b_b79k",
     captioning_strategy="none",
     pass_through_mp4=False,
+    pass_through_m4a=False,
     generated_caption_txt=False, # TEMPORARY
     caption_similarity=False,
 ):
@@ -319,7 +324,7 @@ def clip_video_encode(
                 writer.create_shard(shard_id=int(shard_id.split(".tar")[0]))
                 times["download_and_extract"] = times.get("download_and_extract", 0) + time.time() - t
                 t = time.time()
-                vids, ids, meta = read_shard(tempdir, read_mp4=pass_through_mp4)
+                vids, ids, meta = read_shard(tempdir, read_mp4=pass_through_mp4, read_m4a=pass_through_m4a)
                 meta_refs = list(range(len(vids)))
                 fr = FrameReader(
                     vids,

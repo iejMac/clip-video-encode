@@ -111,6 +111,9 @@ class WebDatasetWriter:
                 if "mp4_video" in metadata:
                     vid_bytes = metadata.pop("mp4_video")
                     sample["mp4"] = vid_bytes
+                if "m4a_audio" in metadata:
+                    aud_bytes = metadata.pop("m4a_audio")
+                    sample["m4a"] = aud_bytes
                 sample["json"] = json.dumps(metadata, indent=4)
 
         self.tarwriter.write(sample)
