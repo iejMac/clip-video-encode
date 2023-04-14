@@ -108,7 +108,7 @@ def encode_chunk(
             writer.write(None, vid_id, vid_meta)
 
 
-def read_shard(tempdir, pass_through_keys=[]):
+def read_shard(tempdir, pass_through_keys=None):
     """
     Extract video filepaths, video ids, and metadata from the contents of an opened WebDataset shard
 
@@ -116,6 +116,9 @@ def read_shard(tempdir, pass_through_keys=[]):
         tempdir:
             path to directory containing contents of an opened WebDataset shard with input data
     """
+    if pass_through_keys == None:
+        pass_through_keys = []
+
     vids = sorted(
         [f.split("/")[-1] for f in glob.glob(tempdir + "/" + "*.mp4")]
     )  # TODO: parameterize the video extension
