@@ -108,7 +108,7 @@ def encode_chunk(
             writer.write(None, vid_id, vid_meta)
 
 
-def read_shard(tempdir, read_mp4=False):
+def read_shard(tempdir, pass_through_keys=[]):
     """
     Extract video filepaths, video ids, and metadata from the contents of an opened WebDataset shard
 
@@ -127,22 +127,22 @@ def read_shard(tempdir, read_mp4=False):
     keys = [x.split(".mp4")[0] for x in vids]
     meta = []
     for key in keys:
-        if has_json:
+        if has_json and "json" in pass_through_keys:
             with open(tempdir + "/" + key + ".json", "rb") as f:
                 metadata = json.load(f)
         else:
             metadata = {}
 
-        if has_txt:
+        if has_txt and "txt" in pass_through_keys :
             with open(tempdir + "/" + key + ".txt", "r", encoding="UTF-8") as f:
                 txt = f.read()
             metadata["caption"] = txt
 
-        if read_mp4:
+        if "mp4" in pass_through_keys:
             with open(tempdir + "/" + key + ".mp4", "rb") as f:
                 mp4_video = f.read()
                 metadata["mp4_video"] = mp4_video
-        if has_npz:
+        if has_npz and "npz" in pass_through_keys:
             np_metadata = dict(np.load(tempdir + "/" + key + ".npz"))
             metadata["numpy_metadata"] = np_metadata
 
@@ -166,7 +166,7 @@ def clip_video_encode(
     oc_model_name="ViT-B-32",
     pretrained="laion2b_s34b_b79k",
     captioning_strategy="none",
-    pass_through_mp4=False,
+    pass_through_keys="mp4,txt,json",
     caption_similarity=False,
 ):
     """
@@ -204,8 +204,8 @@ def clip_video_encode(
           - none: don't generate any captions
           - center: generate a caption for the middle frame
         int: (NOT IMPLEMENTED) step size for which frames to generate captions for
-      pass_through_mp4:
-        bool: whether to save the mp4 in the sample as well
+      pass_through_keys:
+        str: comma separated list of extension to pass through from input dataset (if webdataset format)
       caption_similarity:
         bool: whether to put the similarity between the average frame embedding and text embedding into metadata
     """
@@ -214,6 +214,9 @@ def clip_video_encode(
     if isinstance(metadata_columns, str):
         metadata_columns = [metadata_columns] if metadata_columns != "" else []
     metadata_columns = list(metadata_columns) if isinstance(metadata_columns, tuple) else metadata_columns
+
+    if isinstance(pass_through_keys, str):
+        pass_through_keys = pass_through_keys.split(",")
 
     if input_format == "table":
         reader = Reader(src, metadata_columns)
@@ -312,7 +315,7 @@ def clip_video_encode(
                 writer.create_shard(shard_id=int(shard_id.split(".tar")[0]))
                 times["download_and_extract"] = times.get("download_and_extract", 0) + time.time() - t
                 t = time.time()
-                vids, ids, meta = read_shard(tempdir, read_mp4=pass_through_mp4)
+                vids, ids, meta = read_shard(tempdir, pass_through_keys=pass_through_keys)
                 meta_refs = list(range(len(vids)))
                 fr = FrameReader(
                     vids,
