@@ -310,54 +310,74 @@ def clip_video_encode(
             )
     else:  # WebDataset shard logic
         for shard in shards:
-            times = {}
-            t = time.time()
-            with tempfile.TemporaryDirectory(prefix=f"worker_{global_rank}_") as tempdir:
-                os.chmod(tempdir, 0o777)  # This lets subprocesses from v2np read files in the tempdir
-                folder = "/".join(shard.split("/")[0:-1])
-                fs, output_path = fsspec.core.url_to_fs(folder)
-
-                shard_id = shard.split("/")[-1]
-                tar_bytes = io.BytesIO(fs.open(f"{output_path}/{shard_id}").read())
-                with tarfile.open(fileobj=tar_bytes) as tar:
-                    tar.extractall(tempdir)
-                writer.create_shard(shard_id=int(shard_id.split(".tar")[0]))
-                times["download_and_extract"] = times.get("download_and_extract", 0) + time.time() - t
+            try:
+                times = {}
                 t = time.time()
-                vids, ids, meta = read_shard(tempdir, read_mp4=pass_through_mp4, read_m4a=pass_through_m4a)
-                meta_refs = list(range(len(vids)))
-                fr = FrameReader(
-                    vids,
-                    meta_refs,
-                    take_every_nth,
-                    IMG_SIZE,
-                    workers=frame_workers,
-                    memory_size=frame_memory_size,
-                )
-                fr.start_reading()
+                with tempfile.TemporaryDirectory(prefix=f"worker_{global_rank}_") as tempdir:
+                    os.chmod(tempdir, 0o777)  # This lets subprocesses from v2np read files in the tempdir
+                    folder = "/".join(shard.split("/")[0:-1])
+                    fs, output_path = fsspec.core.url_to_fs(folder)
 
-                frames, ind_dict = [], {}
-                block_size = 0
-                i = 0
-                n_frames = 0
-                for vid_frames, info in fr:
-                    i += 1
-
-                    if captioning_strategy == "center":
-                        vid_frames = vid_frames[len(vid_frames) // 2 : len(vid_frames) // 2 + 1]
-
-                    n_frames += len(vid_frames)
-                    frames.append(vid_frames)
-                    ind_dict[info["reference"]] = (
-                        block_size,
-                        block_size + vid_frames.shape[0],
-                        info["dst_name"],
-                    )
-                    block_size += vid_frames.shape[0]
-                    times["read_frames"] = times.get("read_frames", 0) + time.time() - t
+                    shard_id = shard.split("/")[-1]
+                    tar_bytes = io.BytesIO(fs.open(f"{output_path}/{shard_id}").read())
+                    with tarfile.open(fileobj=tar_bytes) as tar:
+                        tar.extractall(tempdir)
+                    writer.create_shard(shard_id=int(shard_id.split(".tar")[0]))
+                    times["download_and_extract"] = times.get("download_and_extract", 0) + time.time() - t
                     t = time.time()
+                    vids, ids, meta = read_shard(tempdir, read_mp4=pass_through_mp4, read_m4a=pass_through_m4a)
+                    meta_refs = list(range(len(vids)))
+                    fr = FrameReader(
+                        vids,
+                        meta_refs,
+                        take_every_nth,
+                        IMG_SIZE,
+                        workers=frame_workers,
+                        memory_size=frame_memory_size,
+                    )
+                    fr.start_reading()
 
-                    if i % CHUNK_SIZE == 0:
+                    frames, ind_dict = [], {}
+                    block_size = 0
+                    i = 0
+                    n_frames = 0
+                    for vid_frames, info in fr:
+                        i += 1
+
+                        if captioning_strategy == "center":
+                            vid_frames = vid_frames[len(vid_frames) // 2 : len(vid_frames) // 2 + 1]
+
+                        n_frames += len(vid_frames)
+                        frames.append(vid_frames)
+                        ind_dict[info["reference"]] = (
+                            block_size,
+                            block_size + vid_frames.shape[0],
+                            info["dst_name"],
+                        )
+                        block_size += vid_frames.shape[0]
+                        times["read_frames"] = times.get("read_frames", 0) + time.time() - t
+                        t = time.time()
+
+                        if i % CHUNK_SIZE == 0:
+                            encode_chunk(
+                                frames,
+                                ind_dict,
+                                writer,
+                                fm,
+                                preprocess,
+                                meta,
+                                ids,
+                                use_dst_name,
+                                device,
+                                input_format=input_format,
+                                captioning_strategy=captioning_strategy,
+                                generated_caption_txt=generated_caption_txt,
+                            )
+                            times["encode"] = times.get("encode", 0) + time.time() - t
+                            t = time.time()
+                            frames, ind_dict, block_size = [], {}, 0
+                    t = time.time()
+                    if len(frames) > 0:  # TODO: make this cleaner
                         encode_chunk(
                             frames,
                             ind_dict,
@@ -372,29 +392,12 @@ def clip_video_encode(
                             captioning_strategy=captioning_strategy,
                             generated_caption_txt=generated_caption_txt,
                         )
-                        times["encode"] = times.get("encode", 0) + time.time() - t
-                        t = time.time()
-                        frames, ind_dict, block_size = [], {}, 0
-                t = time.time()
-                if len(frames) > 0:  # TODO: make this cleaner
-                    encode_chunk(
-                        frames,
-                        ind_dict,
-                        writer,
-                        fm,
-                        preprocess,
-                        meta,
-                        ids,
-                        use_dst_name,
-                        device,
-                        input_format=input_format,
-                        captioning_strategy=captioning_strategy,
-                        generated_caption_txt=generated_caption_txt,
-                    )
-                times["encode"] = times.get("encode", 0) + time.time() - t
-                t = time.time()
-            frame_adjusted = {k: n_frames / v for k, v in times.items()}
-            print(f"Frames/s: {frame_adjusted}")
+                    times["encode"] = times.get("encode", 0) + time.time() - t
+                    t = time.time()
+                frame_adjusted = {k: n_frames / v for k, v in times.items()}
+                print(f"Frames/s: {frame_adjusted}")
+            except Exception as e:
+                print(f"Shard {shard} failed: {str(e)}")
 
 
 if __name__ == "__main__":
