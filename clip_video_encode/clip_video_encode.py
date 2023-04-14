@@ -136,7 +136,7 @@ def read_shard(tempdir, pass_through_keys=None):
         else:
             metadata = {}
 
-        if has_txt and "txt" in pass_through_keys :
+        if has_txt and "txt" in pass_through_keys:
             with open(tempdir + "/" + key + ".txt", "r", encoding="UTF-8") as f:
                 txt = f.read()
             metadata["caption"] = txt
