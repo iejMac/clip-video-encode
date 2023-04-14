@@ -116,7 +116,7 @@ def read_shard(tempdir, pass_through_keys=None):
         tempdir:
             path to directory containing contents of an opened WebDataset shard with input data
     """
-    if pass_through_keys == None:
+    if pass_through_keys is None:
         pass_through_keys = []
 
     vids = sorted(
