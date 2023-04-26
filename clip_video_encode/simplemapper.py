@@ -31,7 +31,7 @@ class FrameMapper:
         tok = self.tokenizer(prompt)
         index = torch.argmax((tok == 49407).type(torch.int64))
         tok = tok[:, :index]
-        tok = torch.cat([tok]*batch.shape[0])
+        tok = torch.cat([tok] * batch.shape[0])
         tok = tok.to(batch.device)
 
         with torch.no_grad(), torch.cuda.amp.autocast():
@@ -45,5 +45,8 @@ class FrameMapper:
                 num_beams=10,
                 num_beam_groups=5,
             )
-        captions = [open_clip.decode(gen).split("<end_of_text>")[0].replace("<start_of_text>", "")[len(prompt):] for gen in generated]
+        captions = [
+            open_clip.decode(gen).split("<end_of_text>")[0].replace("<start_of_text>", "")[len(prompt) :]
+            for gen in generated
+        ]
         return captions
