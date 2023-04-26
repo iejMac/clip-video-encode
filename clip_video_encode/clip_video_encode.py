@@ -266,13 +266,13 @@ def clip_video_encode(
     elif output_format == "webdataset":
         # TODO: maybe include params for this?
         starting_shard_id = int(shards[0].split("/")[-1].split(".tar")[0])
-        writer = WebDatasetWriter(dest, 9, "npy", maxcount=1e6, shard_id=starting_shard_id)
+        writer = WebDatasetWriter(dest, 5, "npy", maxcount=1e6, shard_id=starting_shard_id)
 
     # Initialize model:
     model, _, preprocess = open_clip.create_model_and_transforms(oc_model_name, pretrained=pretrained, device=device)
     tokenizer = open_clip.get_tokenizer(oc_model_name)
     preprocess.transforms = [ToPILImage()] + preprocess.transforms[-3:]
-    fm = FrameMapper(model, device, tokenizer=tokenizer if caption_similarity else None)
+    fm = FrameMapper(model, device, tokenizer=tokenizer if (caption_similarity or (captioning_strategy != "none")) else None)
 
     if input_format == "table":
         fr = FrameReader(
