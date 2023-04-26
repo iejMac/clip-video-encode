@@ -24,6 +24,7 @@ class FrameMapper:
         return caption_embeddings
 
     def generate_captions(self, batch):
+        """generate caption for batch of imgs"""
         # TODO: idk if this is the best way to do it but works for now
 
         # jprompt = "a video of "
