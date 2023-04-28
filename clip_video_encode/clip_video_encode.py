@@ -26,7 +26,6 @@ import fsspec
 import io
 
 BATCH_SIZE = 256
-IMG_SIZE = 224
 EMB_DIM = 512
 N_DATASET_WORKERS = 6
 CHUNK_SIZE = 200
@@ -171,6 +170,7 @@ def clip_video_encode(
     captioning_strategy="none",
     pass_through_keys="mp4,txt,json",
     caption_similarity=False,
+    img_size=224
 ):
     """
     Encode frames using CLIP image encoder
@@ -211,6 +211,8 @@ def clip_video_encode(
         str: comma separated list of extension to pass through from input dataset (if webdataset format)
       caption_similarity:
         bool: whether to put the similarity between the average frame embedding and text embedding into metadata
+      img_size:
+        int: pixel height and width of target output shape
     """
     assert input_format in ["table", "webdataset"]
 
@@ -275,7 +277,7 @@ def clip_video_encode(
             vids,
             meta_refs,
             take_every_nth,
-            IMG_SIZE,
+            img_size,
             workers=frame_workers,
             memory_size=frame_memory_size,
         )
@@ -326,7 +328,7 @@ def clip_video_encode(
                     vids,
                     meta_refs,
                     take_every_nth,
-                    IMG_SIZE,
+                    img_size,
                     workers=frame_workers,
                     memory_size=frame_memory_size,
                 )
