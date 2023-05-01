@@ -166,6 +166,7 @@ def clip_video_encode(
     metadata_columns="",
     use_dst_name=False,
     distribute="none",
+    oom_shard_count=5,
     oc_model_name="ViT-B-32",
     pretrained="laion2b_s34b_b79k",
     captioning_strategy="none",
@@ -260,7 +261,7 @@ def clip_video_encode(
     elif output_format == "webdataset":
         # TODO: maybe include params for this?
         starting_shard_id = int(shards[0].split("/")[-1].split(".tar")[0])
-        writer = WebDatasetWriter(dest, 9, "npy", maxcount=1e6, shard_id=starting_shard_id)
+        writer = WebDatasetWriter(dest, oom_shard_count, "npy", maxcount=1e6, shard_id=starting_shard_id)
 
     # Initialize model:
     model, _, preprocess = open_clip.create_model_and_transforms(oc_model_name, pretrained=pretrained, device=device)
