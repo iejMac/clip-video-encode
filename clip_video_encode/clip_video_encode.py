@@ -170,7 +170,7 @@ def clip_video_encode(
     captioning_strategy="none",
     pass_through_keys="mp4,txt,json",
     caption_similarity=False,
-    img_size=224
+    img_size=224,
 ):
     """
     Encode frames using CLIP image encoder
