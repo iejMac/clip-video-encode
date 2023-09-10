@@ -126,7 +126,6 @@ def read_shard(tempdir, pass_through_keys=None):
         [f.split("/")[-1] for f in glob.glob(tempdir + "/" + "*.mp4")]
     )  # TODO: parameterize the video extension
 
-    has_npz = len(glob.glob(tempdir + "/" + "*.npz")) > 0
     has_txt = len(glob.glob(tempdir + "/" + "*.txt")) > 0
     has_json = len(glob.glob(tempdir + "/" + "*.json")) > 0
 
@@ -148,10 +147,6 @@ def read_shard(tempdir, pass_through_keys=None):
             with open(tempdir + "/" + key + ".mp4", "rb") as f:
                 mp4_video = f.read()
                 metadata["mp4_video"] = mp4_video
-
-        if has_npz and "npz" in pass_through_keys:
-            np_metadata = dict(np.load(tempdir + "/" + key + ".npz"))
-            metadata["numpy_metadata"] = np_metadata
 
         meta.append(metadata)
 
