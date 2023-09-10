@@ -111,7 +111,6 @@ def encode_chunk(
             writer.write(None, vid_id, vid_meta)
 
 
-
 def read_shard(tempdir, pass_through_keys=None):
     """
     Extract video filepaths, video ids, and metadata from the contents of an opened WebDataset shard
@@ -149,7 +148,7 @@ def read_shard(tempdir, pass_through_keys=None):
             with open(tempdir + "/" + key + ".mp4", "rb") as f:
                 mp4_video = f.read()
                 metadata["mp4_video"] = mp4_video
-                
+
         if has_npz and "npz" in pass_through_keys:
             np_metadata = dict(np.load(tempdir + "/" + key + ".npz"))
             metadata["numpy_metadata"] = np_metadata
@@ -276,7 +275,9 @@ def clip_video_encode(
     model, _, preprocess = open_clip.create_model_and_transforms(oc_model_name, pretrained=pretrained, device=device)
     tokenizer = open_clip.get_tokenizer(oc_model_name)
     preprocess.transforms = [ToPILImage()] + preprocess.transforms[-3:]
-    fm = FrameMapper(model, device, tokenizer=tokenizer if (caption_similarity or (captioning_strategy != "none")) else None)
+    fm = FrameMapper(
+        model, device, tokenizer=tokenizer if (caption_similarity or (captioning_strategy != "none")) else None
+    )
 
     if input_format == "table":
         fr = FrameReader(
