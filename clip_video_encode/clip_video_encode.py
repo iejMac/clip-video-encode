@@ -48,7 +48,7 @@ def encode_chunk(
     device,
     input_format="table",
     captioning_strategy="none",
-    generated_caption_txt=False,
+    generated_caption_key="generated_caption",
 ):
     """encodes a chunk of video frames and saves."""
     vid_block = np.concatenate(frames)
@@ -106,10 +106,8 @@ def encode_chunk(
 
             # NOTE: Warning this might overwrite previous caption
             # NOTE: for now assumes there is only one caption
-            if generated_caption_txt:
-                vid_meta["caption"] = captions[i0:it][0]
-            else:
-                vid_meta["generated_caption"] = captions[i0:it][0]
+            vid_meta[generated_caption_key] = captions[i0:it][0]
+
             # TODO: we should be able to do both at once with a CoCa model
             writer.write(None, vid_id, vid_meta)
 
@@ -178,7 +176,7 @@ def clip_video_encode(
     captioning_strategy="none",
     pass_through_mp4=False,
     pass_through_m4a=False,
-    generated_caption_txt=False, # TEMPORARY
+    generated_caption_key="generated_caption",  # this will put it in json, make this 'caption' if you want it in txt
     caption_similarity=False,
 ):
     """
@@ -371,7 +369,7 @@ def clip_video_encode(
                                 device,
                                 input_format=input_format,
                                 captioning_strategy=captioning_strategy,
-                                generated_caption_txt=generated_caption_txt,
+                                generated_caption_key=generated_caption_key,
                             )
                             times["encode"] = times.get("encode", 0) + time.time() - t
                             t = time.time()
@@ -390,7 +388,7 @@ def clip_video_encode(
                             device,
                             input_format=input_format,
                             captioning_strategy=captioning_strategy,
-                            generated_caption_txt=generated_caption_txt,
+                            generated_caption_key=generated_caption_key,
                         )
                     times["encode"] = times.get("encode", 0) + time.time() - t
                     t = time.time()
