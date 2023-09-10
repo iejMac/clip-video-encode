@@ -25,7 +25,8 @@ import glob
 import fsspec
 import io
 
-BATCH_SIZE = 256
+# BATCH_SIZE = 256
+BATCH_SIZE = 16
 N_DATASET_WORKERS = 6
 CHUNK_SIZE = 200
 
@@ -45,68 +46,90 @@ def encode_chunk(
     device,
     input_format="table",
     captioning_strategy="none",
+    frame_tokenization_strategy="none",
     generated_caption_key="generated_caption",
 ):
     """encodes a chunk of video frames and saves."""
     vid_block = np.concatenate(frames)
     dl = block2dl(vid_block, mapper.preprocess, BATCH_SIZE, N_DATASET_WORKERS)
 
-    if captioning_strategy != "none":
-        captions = []
-        for batch in dl:
-            captions += mapper.generate_captions(batch.to(device))
+    with torch.no_grad():
+        if captioning_strategy != "none":
+            captions = []
+            for batch in dl:
+                captions += mapper.generate_captions(batch.to(device))
 
-        for ref, (i0, it, dst_name) in ind_dict.items():
-            vid_id = dst_name[:-4] if use_dst_name else ids[ref]
-            if input_format == "webdataset":
-                vid_meta = meta[ref]
-            else:
-                vid_meta = {}
-                for k in meta:
-                    vid_meta[k] = meta[k][ref].as_py()
+            for ref, (i0, it, dst_name) in ind_dict.items():
+                vid_id = dst_name[:-4] if use_dst_name else ids[ref]
+                if input_format == "webdataset":
+                    vid_meta = meta[ref]
+                else:
+                    vid_meta = {}
+                    for k in meta:
+                        vid_meta[k] = meta[k][ref].as_py()
 
-            # NOTE: Warning this might overwrite previous caption
-            # NOTE: for now assumes there is only one caption
-            vid_meta[generated_caption_key] = captions[i0:it][0]
+                # NOTE: Warning this might overwrite previous caption
+                # NOTE: for now assumes there is only one caption
+                vid_meta[generated_caption_key] = captions[i0:it][0]
 
-            # TODO: we should be able to do both at once with a CoCa model
-            writer.write(None, vid_id, vid_meta)
-    else:
-        embeddings = []
-        for batch in dl:
-            with torch.no_grad(), torch.cuda.amp.autocast():
-                emb = mapper(batch.to(device))
-                embeddings.append(emb)
+                # TODO: we should be able to do both at once with a CoCa model
+                writer.write(None, vid_id, vid_meta)
+        elif frame_tokenization_strategy != "none":
+            tokens = []
+            for batch in dl:
+                batch = batch.permute(0, 3, 1, 2).float() / 255.  # make channel first and [0, 1]
+                indices = mapper.tokenize_frames(batch.to(device))
+                tokens.append(indices)
 
-        caption_embs = None
-        if mapper.tokenizer is not None:
-            # TODO: is there a better way of doing this?
-            # here we will compute similarity of empty string...
-            captions = [m["caption"] if "caption" in m else "" for m in meta]
-            caption_embs = mapper.encode_captions(captions)
-            caption_embs = caption_embs / np.linalg.norm(caption_embs, axis=-1)[:, None]
+            tokens = np.concatenate(tokens)
 
-        embeddings = np.concatenate(embeddings)
-        for ref, (i0, it, dst_name) in ind_dict.items():
-            vid_id = dst_name[:-4] if use_dst_name else ids[ref]
-            if input_format == "webdataset":
-                vid_meta = meta[ref]
-            else:
-                vid_meta = {}
-                for k in meta:
-                    vid_meta[k] = meta[k][ref].as_py()
+            for ref, (i0, it, dst_name) in ind_dict.items():
+                vid_id = dst_name[:-4] if use_dst_name else ids[ref]
+                if input_format == "webdataset":
+                    vid_meta = meta[ref]
+                else:
+                    vid_meta = {}
+                    for k in meta:
+                        vid_meta[k] = meta[k][ref].as_py()
 
-            frame_embeddings = embeddings[i0:it]
-            if caption_embs is not None:
-                # normalize
-                fe = frame_embeddings / np.linalg.norm(frame_embeddings, axis=-1)[:, None]
-                ce = caption_embs[ref]
+                video_tokens = tokens[i0:it]
+                writer.write(video_tokens, vid_id, vid_meta)
+        else:
+            embeddings = []
+            for batch in dl:
+                with torch.cuda.amp.autocast():
+                    emb = mapper(batch.to(device))
+                    embeddings.append(emb)
 
-                sim = (fe @ ce.T).tolist()
+            caption_embs = None
+            if mapper.tokenizer is not None:
+                # TODO: is there a better way of doing this?
+                # here we will compute similarity of empty string...
+                captions = [m["caption"] if "caption" in m else "" for m in meta]
+                caption_embs = mapper.encode_captions(captions)
+                caption_embs = caption_embs / np.linalg.norm(caption_embs, axis=-1)[:, None]
 
-                vid_meta["clip_frame_similarity"] = sim
+            embeddings = np.concatenate(embeddings)
+            for ref, (i0, it, dst_name) in ind_dict.items():
+                vid_id = dst_name[:-4] if use_dst_name else ids[ref]
+                if input_format == "webdataset":
+                    vid_meta = meta[ref]
+                else:
+                    vid_meta = {}
+                    for k in meta:
+                        vid_meta[k] = meta[k][ref].as_py()
 
-            writer.write(frame_embeddings, vid_id, vid_meta)
+                frame_embeddings = embeddings[i0:it]
+                if caption_embs is not None:
+                    # normalize
+                    fe = frame_embeddings / np.linalg.norm(frame_embeddings, axis=-1)[:, None]
+                    ce = caption_embs[ref]
+
+                    sim = (fe @ ce.T).tolist()
+
+                    vid_meta["clip_frame_similarity"] = sim
+
+                writer.write(frame_embeddings, vid_id, vid_meta)
 
 
 
@@ -272,7 +295,11 @@ def clip_video_encode(
         writer = WebDatasetWriter(dest, oom_shard_count, "npy", maxcount=1e6, shard_id=starting_shard_id)
 
     fm = FrameMapper(
-        model_name, pretrained, device, get_tokenizer=(caption_similarity or (captioning_strategy != "none"))
+        model_name,
+        pretrained,
+        device,
+        get_text_tokenizer=(caption_similarity or (captioning_strategy != "none")),
+        get_frame_tokenizer=(frame_tokenization_strategy != 'none'),
     )
 
     if input_format == "table":
@@ -311,7 +338,7 @@ def clip_video_encode(
             )
     else:  # WebDataset shard logic
         for shard in shards:
-            try:
+            # try:
                 times = {}
                 t = time.time()
                 with tempfile.TemporaryDirectory(prefix=f"worker_{global_rank}_") as tempdir:
@@ -371,6 +398,7 @@ def clip_video_encode(
                                 device,
                                 input_format=input_format,
                                 captioning_strategy=captioning_strategy,
+                                frame_tokenization_strategy=frame_tokenization_strategy,
                                 generated_caption_key=generated_caption_key,
                             )
                             times["encode"] = times.get("encode", 0) + time.time() - t
@@ -389,14 +417,15 @@ def clip_video_encode(
                             device,
                             input_format=input_format,
                             captioning_strategy=captioning_strategy,
+                            frame_tokenization_strategy=frame_tokenization_strategy,
                             generated_caption_key=generated_caption_key,
                         )
                     times["encode"] = times.get("encode", 0) + time.time() - t
                     t = time.time()
                 frame_adjusted = {k: n_frames / v for k, v in times.items()}
                 print(f"Frames/s: {frame_adjusted}")
-            except Exception as e:  # pylint: disable=(broad-except)
-                print(f"Shard {shard} failed: {str(e)}")
+            # except Exception as e:  # pylint: disable=(broad-except)
+            #     print(f"Shard {shard} failed: {str(e)}")
 
 
 if __name__ == "__main__":
