@@ -26,7 +26,6 @@ import fsspec
 import io
 
 BATCH_SIZE = 256
-EMB_DIM = 512
 N_DATASET_WORKERS = 6
 CHUNK_SIZE = 200
 
@@ -40,7 +39,6 @@ def encode_chunk(
     ind_dict,
     writer,
     mapper,
-    preprocess,
     meta,
     ids,
     use_dst_name,
@@ -51,9 +49,29 @@ def encode_chunk(
 ):
     """encodes a chunk of video frames and saves."""
     vid_block = np.concatenate(frames)
-    dl = block2dl(vid_block, preprocess, BATCH_SIZE, N_DATASET_WORKERS)
+    dl = block2dl(vid_block, mapper.preprocess, BATCH_SIZE, N_DATASET_WORKERS)
 
-    if captioning_strategy == "none":
+    if captioning_strategy != "none":
+        captions = []
+        for batch in dl:
+            captions += mapper.generate_captions(batch.to(device))
+
+        for ref, (i0, it, dst_name) in ind_dict.items():
+            vid_id = dst_name[:-4] if use_dst_name else ids[ref]
+            if input_format == "webdataset":
+                vid_meta = meta[ref]
+            else:
+                vid_meta = {}
+                for k in meta:
+                    vid_meta[k] = meta[k][ref].as_py()
+
+            # NOTE: Warning this might overwrite previous caption
+            # NOTE: for now assumes there is only one caption
+            vid_meta[generated_caption_key] = captions[i0:it][0]
+
+            # TODO: we should be able to do both at once with a CoCa model
+            writer.write(None, vid_id, vid_meta)
+    else:
         embeddings = []
         for batch in dl:
             with torch.no_grad(), torch.cuda.amp.autocast():
@@ -89,26 +107,8 @@ def encode_chunk(
                 vid_meta["clip_frame_similarity"] = sim
 
             writer.write(frame_embeddings, vid_id, vid_meta)
-    else:
-        captions = []
-        for batch in dl:
-            captions += mapper.generate_captions(batch.to(device))
 
-        for ref, (i0, it, dst_name) in ind_dict.items():
-            vid_id = dst_name[:-4] if use_dst_name else ids[ref]
-            if input_format == "webdataset":
-                vid_meta = meta[ref]
-            else:
-                vid_meta = {}
-                for k in meta:
-                    vid_meta[k] = meta[k][ref].as_py()
 
-            # NOTE: Warning this might overwrite previous caption
-            # NOTE: for now assumes there is only one caption
-            vid_meta[generated_caption_key] = captions[i0:it][0]
-
-            # TODO: we should be able to do both at once with a CoCa model
-            writer.write(None, vid_id, vid_meta)
 
 
 def read_shard(tempdir, pass_through_keys=None):
@@ -166,9 +166,10 @@ def clip_video_encode(
     use_dst_name=False,
     distribute="none",
     oom_shard_count=5,
-    oc_model_name="ViT-B-32",
+    model_name="ViT-B-32",
     pretrained="laion2b_s34b_b79k",
     captioning_strategy="none",
+    frame_tokenization_strategy="none",
     generated_caption_key="generated_caption",  # this will put it in json, make this 'caption' if you want it in txt
     pass_through_keys="mp4,txt,json",
     caption_similarity=False,
@@ -200,10 +201,14 @@ def clip_video_encode(
         bool: use the save name suggested by video2numpy
       distribute:
         str: distribution strategy, currently either slurm or none
-      oc_model_name:
-        str: open_clip model name, used for selecting CLIP architecture
+      model_name:
+        str: 
+          - open_clip model name, used for selecting CLIP architecture
+          - vqgan config path
       pretrained:
-        str: open_clip pretrained weights name
+        str: 
+          - open_clip pretrained weights name
+          - vqgan weights checkpoint path
       captioning_strategy:
         str: which frames of a video to generate captions for. Possible values are:
           - none: don't generate any captions
@@ -266,12 +271,8 @@ def clip_video_encode(
         starting_shard_id = int(shards[0].split("/")[-1].split(".tar")[0])
         writer = WebDatasetWriter(dest, oom_shard_count, "npy", maxcount=1e6, shard_id=starting_shard_id)
 
-    # Initialize model:
-    model, _, preprocess = open_clip.create_model_and_transforms(oc_model_name, pretrained=pretrained, device=device)
-    tokenizer = open_clip.get_tokenizer(oc_model_name)
-    preprocess.transforms = [ToPILImage()] + preprocess.transforms[-3:]
     fm = FrameMapper(
-        model, device, tokenizer=tokenizer if (caption_similarity or (captioning_strategy != "none")) else None
+        model_name, pretrained, device, get_tokenizer=(caption_similarity or (captioning_strategy != "none"))
     )
 
     if input_format == "table":
@@ -300,13 +301,13 @@ def clip_video_encode(
 
             if i % CHUNK_SIZE == 0:
                 encode_chunk(
-                    frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device, input_format=input_format
+                    frames, ind_dict, writer, fm, meta, ids, use_dst_name, device, input_format=input_format
                 )
                 frames, ind_dict, block_size = [], {}, 0
 
         if len(frames) > 0:  # TODO: make this cleaner
             encode_chunk(
-                frames, ind_dict, writer, fm, preprocess, meta, ids, use_dst_name, device, input_format=input_format
+                frames, ind_dict, writer, fm, meta, ids, use_dst_name, device, input_format=input_format
             )
     else:  # WebDataset shard logic
         for shard in shards:
@@ -364,7 +365,6 @@ def clip_video_encode(
                                 ind_dict,
                                 writer,
                                 fm,
-                                preprocess,
                                 meta,
                                 ids,
                                 use_dst_name,
@@ -383,7 +383,6 @@ def clip_video_encode(
                             ind_dict,
                             writer,
                             fm,
-                            preprocess,
                             meta,
                             ids,
                             use_dst_name,

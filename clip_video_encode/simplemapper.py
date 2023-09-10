@@ -1,16 +1,23 @@
 """simplemapper - simple frame -> embedding mapper."""
 import torch
-
 import open_clip
+
+from torchvision.transforms import ToPILImage
 
 
 class FrameMapper:
     """maps frames -> embeddings (or captions"""
 
-    def __init__(self, model, device, tokenizer=None):
+    def __init__(self, model_name, pretrained, device, get_tokenizer=False):
+        # Initialize model:
+        model, _, preprocess = open_clip.create_model_and_transforms(model_name, pretrained=pretrained, device=device)
+        tokenizer = open_clip.get_tokenizer(oc_model_name) if get_tokenizer else None
+        preprocess.transforms = [ToPILImage()] + preprocess.transforms[-3:]
+
         self.model = model
-        self.device = device
+        self.preprocess = preprocess
         self.tokenizer = tokenizer
+        self.device = device
 
     def __call__(self, batch, captions=None):
         with torch.no_grad(), torch.cuda.amp.autocast():
