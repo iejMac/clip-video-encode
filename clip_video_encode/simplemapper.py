@@ -50,6 +50,4 @@ class FrameMapper:
             open_clip.decode(gen).split("<end_of_text>")[0].replace("<start_of_text>", "")[len(prompt) :]
             for gen in generated
         ]
-
         return captions
-
