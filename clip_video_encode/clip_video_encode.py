@@ -26,7 +26,6 @@ import fsspec
 import io
 
 BATCH_SIZE = 256
-IMG_SIZE = 224
 EMB_DIM = 512
 N_DATASET_WORKERS = 6
 CHUNK_SIZE = 200
@@ -112,7 +111,8 @@ def encode_chunk(
             writer.write(None, vid_id, vid_meta)
 
 
-def read_shard(tempdir, read_mp4=False, read_m4a=False):
+
+def read_shard(tempdir, pass_through_keys=None):
     """
     Extract video filepaths, video ids, and metadata from the contents of an opened WebDataset shard
 
@@ -120,6 +120,9 @@ def read_shard(tempdir, read_mp4=False, read_m4a=False):
         tempdir:
             path to directory containing contents of an opened WebDataset shard with input data
     """
+    if pass_through_keys is None:
+        pass_through_keys = []
+
     vids = sorted(
         [f.split("/")[-1] for f in glob.glob(tempdir + "/" + "*.mp4")]
     )  # TODO: parameterize the video extension
@@ -131,26 +134,23 @@ def read_shard(tempdir, read_mp4=False, read_m4a=False):
     keys = [x.split(".mp4")[0] for x in vids]
     meta = []
     for key in keys:
-        if has_json:
+        if has_json and "json" in pass_through_keys:
             with open(tempdir + "/" + key + ".json", "rb") as f:
                 metadata = json.load(f)
         else:
             metadata = {}
 
-        if has_txt:
+        if has_txt and "txt" in pass_through_keys:
             with open(tempdir + "/" + key + ".txt", "r", encoding="UTF-8") as f:
                 txt = f.read()
             metadata["caption"] = txt
 
-        if read_mp4:
+        if "mp4" in pass_through_keys:
             with open(tempdir + "/" + key + ".mp4", "rb") as f:
                 mp4_video = f.read()
                 metadata["mp4_video"] = mp4_video
-        if read_m4a:
-            with open(tempdir + "/" + key + ".m4a", "rb") as f:
-                m4a_audio = f.read()
-                metadata["m4a_audio"] = m4a_audio
-        if has_npz:
+                
+        if has_npz and "npz" in pass_through_keys:
             np_metadata = dict(np.load(tempdir + "/" + key + ".npz"))
             metadata["numpy_metadata"] = np_metadata
 
@@ -171,13 +171,14 @@ def clip_video_encode(
     metadata_columns="",
     use_dst_name=False,
     distribute="none",
+    oom_shard_count=5,
     oc_model_name="ViT-B-32",
     pretrained="laion2b_s34b_b79k",
     captioning_strategy="none",
-    pass_through_mp4=False,
-    pass_through_m4a=False,
     generated_caption_key="generated_caption",  # this will put it in json, make this 'caption' if you want it in txt
+    pass_through_keys="mp4,txt,json",
     caption_similarity=False,
+    img_size=224,
 ):
     """
     Encode frames using CLIP image encoder
@@ -214,16 +215,21 @@ def clip_video_encode(
           - none: don't generate any captions
           - center: generate a caption for the middle frame
         int: (NOT IMPLEMENTED) step size for which frames to generate captions for
-      pass_through_mp4:
-        bool: whether to save the mp4 in the sample as well
+      pass_through_keys:
+        str: comma separated list of extension to pass through from input dataset (if webdataset format)
       caption_similarity:
         bool: whether to put the similarity between the average frame embedding and text embedding into metadata
+      img_size:
+        int: pixel height and width of target output shape
     """
     assert input_format in ["table", "webdataset"]
 
     if isinstance(metadata_columns, str):
         metadata_columns = [metadata_columns] if metadata_columns != "" else []
     metadata_columns = list(metadata_columns) if isinstance(metadata_columns, tuple) else metadata_columns
+
+    if isinstance(pass_through_keys, str):
+        pass_through_keys = pass_through_keys.split(",")
 
     if input_format == "table":
         reader = Reader(src, metadata_columns)
@@ -264,7 +270,7 @@ def clip_video_encode(
     elif output_format == "webdataset":
         # TODO: maybe include params for this?
         starting_shard_id = int(shards[0].split("/")[-1].split(".tar")[0])
-        writer = WebDatasetWriter(dest, 5, "npy", maxcount=1e6, shard_id=starting_shard_id)
+        writer = WebDatasetWriter(dest, oom_shard_count, "npy", maxcount=1e6, shard_id=starting_shard_id)
 
     # Initialize model:
     model, _, preprocess = open_clip.create_model_and_transforms(oc_model_name, pretrained=pretrained, device=device)
@@ -277,7 +283,7 @@ def clip_video_encode(
             vids,
             meta_refs,
             take_every_nth,
-            IMG_SIZE,
+            img_size,
             workers=frame_workers,
             memory_size=frame_memory_size,
         )
@@ -322,6 +328,37 @@ def clip_video_encode(
                         tar.extractall(tempdir)
                     writer.create_shard(shard_id=int(shard_id.split(".tar")[0]))
                     times["download_and_extract"] = times.get("download_and_extract", 0) + time.time() - t
+                    vids, ids, meta = read_shard(tempdir, pass_through_keys=pass_through_keys)
+                    meta_refs = list(range(len(vids)))
+                    fr = FrameReader(
+                        vids,
+                        meta_refs,
+                        take_every_nth,
+                        img_size,
+                        workers=frame_workers,
+                        memory_size=frame_memory_size,
+                    )
+                    fr.start_reading()
+
+                    frames, ind_dict = [], {}
+                    block_size = 0
+                    i = 0
+                    n_frames = 0
+                    for vid_frames, info in fr:
+                        i += 1
+
+                        if captioning_strategy == "center":
+                            vid_frames = vid_frames[len(vid_frames) // 2 : len(vid_frames) // 2 + 1]
+
+                        n_frames += len(vid_frames)
+                        frames.append(vid_frames)
+                        ind_dict[info["reference"]] = (
+                            block_size,
+                            block_size + vid_frames.shape[0],
+                            info["dst_name"],
+                        )
+                        block_size += vid_frames.shape[0]
+                        times["read_frames"] = times.get("read_frames", 0) + time.time() - t
                     t = time.time()
                     vids, ids, meta = read_shard(tempdir, read_mp4=pass_through_mp4, read_m4a=pass_through_m4a)
                     meta_refs = list(range(len(vids)))

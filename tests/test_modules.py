@@ -104,8 +104,8 @@ def test_writer(writer_type):
             l = glob.glob(tmpdir + "/*.tar")
             assert len(l) == 2
             for i in range(2):
-                assert tmpdir + f"/0000{i}.tar" in l
-            assert len(tarfile.open(tmpdir + "/00000.tar").getnames()) == (N_VIDS // 2) * 3
+                assert tmpdir + f"/0000{i}_clip_embeddings.tar" in l
+            assert len(tarfile.open(tmpdir + "/00000_clip_embeddings.tar").getnames()) == (N_VIDS // 2) * 3
 
 
 @pytest.mark.parametrize("input_format", ["txt", "csv", "parquet"])
