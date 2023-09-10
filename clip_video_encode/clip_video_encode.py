@@ -328,6 +328,7 @@ def clip_video_encode(
                         tar.extractall(tempdir)
                     writer.create_shard(shard_id=int(shard_id.split(".tar")[0]))
                     times["download_and_extract"] = times.get("download_and_extract", 0) + time.time() - t
+                    t = time.time()
                     vids, ids, meta = read_shard(tempdir, pass_through_keys=pass_through_keys)
                     meta_refs = list(range(len(vids)))
                     fr = FrameReader(
@@ -335,38 +336,6 @@ def clip_video_encode(
                         meta_refs,
                         take_every_nth,
                         img_size,
-                        workers=frame_workers,
-                        memory_size=frame_memory_size,
-                    )
-                    fr.start_reading()
-
-                    frames, ind_dict = [], {}
-                    block_size = 0
-                    i = 0
-                    n_frames = 0
-                    for vid_frames, info in fr:
-                        i += 1
-
-                        if captioning_strategy == "center":
-                            vid_frames = vid_frames[len(vid_frames) // 2 : len(vid_frames) // 2 + 1]
-
-                        n_frames += len(vid_frames)
-                        frames.append(vid_frames)
-                        ind_dict[info["reference"]] = (
-                            block_size,
-                            block_size + vid_frames.shape[0],
-                            info["dst_name"],
-                        )
-                        block_size += vid_frames.shape[0]
-                        times["read_frames"] = times.get("read_frames", 0) + time.time() - t
-                    t = time.time()
-                    vids, ids, meta = read_shard(tempdir, read_mp4=pass_through_mp4, read_m4a=pass_through_m4a)
-                    meta_refs = list(range(len(vids)))
-                    fr = FrameReader(
-                        vids,
-                        meta_refs,
-                        take_every_nth,
-                        IMG_SIZE,
                         workers=frame_workers,
                         memory_size=frame_memory_size,
                     )
