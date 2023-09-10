@@ -401,7 +401,7 @@ def clip_video_encode(
                     t = time.time()
                 frame_adjusted = {k: n_frames / v for k, v in times.items()}
                 print(f"Frames/s: {frame_adjusted}")
-            except Exception as e:
+            except Exception as e:  # pylint: disable=(broad-except)
                 print(f"Shard {shard} failed: {str(e)}")
 
 
