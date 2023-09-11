@@ -192,7 +192,7 @@ def clip_video_encode(
       take_every_nth:
         int: only take every nth frame
       target_fps:
-        int: target fps to downsample videos to (-1 means original fps or take_every_nth) 
+        int: target fps to downsample videos to (-1 means original fps or take_every_nth)
       frame_workers:
         int: number of Processes to distribute video reading to.
       frame_memory_size:
