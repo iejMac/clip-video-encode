@@ -44,7 +44,7 @@ class FrameMapper:
         else:
             config_path, ckpt_path = model_name, pretrained
             config = load_config(config_path, display=False)
-            model = load_vqgan(config, ckpt_path=ckpt_path).to(device)
+            model = load_vqgan(config, ckpt_path=ckpt_path, is_gumbel=('gumbel' in config_path)).to(device)
             # preprocess = preprocess_vqgan
             preprocess = dataloader_preprocess = lambda x: x
             tokenizer = None
