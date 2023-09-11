@@ -281,9 +281,9 @@ def clip_video_encode(
         fr = FrameReader(
             vids,
             meta_refs,
-            take_every_nth,
-            target_fps,
-            img_size,
+            take_every_nth=take_every_nth,
+            target_fps=target_fps,
+            resize_size=img_size,
             workers=frame_workers,
             memory_size=frame_memory_size,
         )
@@ -334,9 +334,9 @@ def clip_video_encode(
                     fr = FrameReader(
                         vids,
                         meta_refs,
-                        take_every_nth,
-                        target_fps,
-                        img_size,
+                        take_every_nth=take_every_nth,
+                        target_fps=target_fps,
+                        resize_size=img_size,
                         workers=frame_workers,
                         memory_size=frame_memory_size,
                     )
