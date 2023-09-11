@@ -182,6 +182,7 @@ def clip_video_encode(
     dest="",
     output_format="files",
     take_every_nth=25,
+    target_fps=-1,
     input_format="table",
     frame_workers=1,
     frame_memory_size=4,
@@ -214,6 +215,8 @@ def clip_video_encode(
         str: "files" or "webdataset"
       take_every_nth:
         int: only take every nth frame
+      target_fps:
+        int: target fps to downsample videos to (-1 means original fps or take_every_nth)
       frame_workers:
         int: number of Processes to distribute video reading to.
       frame_memory_size:
@@ -306,8 +309,9 @@ def clip_video_encode(
         fr = FrameReader(
             vids,
             meta_refs,
-            take_every_nth,
-            img_size,
+            take_every_nth=take_every_nth,
+            target_fps=target_fps,
+            resize_size=img_size,
             workers=frame_workers,
             memory_size=frame_memory_size,
         )
@@ -358,8 +362,9 @@ def clip_video_encode(
                     fr = FrameReader(
                         vids,
                         meta_refs,
-                        take_every_nth,
-                        img_size,
+                        take_every_nth=take_every_nth,
+                        target_fps=target_fps,
+                        resize_size=img_size,
                         workers=frame_workers,
                         memory_size=frame_memory_size,
                     )
