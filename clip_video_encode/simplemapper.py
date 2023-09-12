@@ -1,5 +1,6 @@
 """simplemapper - simple frame -> embedding mapper."""
 import torch
+import numpy as np
 import open_clip
 
 from torchvision.transforms import ToPILImage
@@ -42,13 +43,13 @@ class FrameMapper:
             tokenizer = open_clip.get_tokenizer(oc_model_name) if get_text_tokenizer else None
             preprocess.transforms = [ToPILImage()] + preprocess.transforms[-3:]
         else:
+            # TODO: you need to download checkpoints/configs from (https://github.com/CompVis/taming-transformers/tree/master#overview-of-pretrained-models)
             config_path, ckpt_path = model_name, pretrained
             config = load_config(config_path, display=False)
             model = load_vqgan(config, ckpt_path=ckpt_path, is_gumbel=('gumbel' in config_path)).to(device)
             # preprocess = preprocess_vqgan
             preprocess = dataloader_preprocess = lambda x: x
             tokenizer = None
-            self.tokens_per_frame = 256 # TODO: make this depend on the model
 
         self.model = model
         self.preprocess = preprocess
@@ -70,7 +71,7 @@ class FrameMapper:
         with torch.no_grad():
             batch = preprocess_vqgan(batch)
             z, _, [_, _, indices] = self.model.encode(batch)
-        return indices.reshape(-1, self.tokens_per_frame).cpu().detach().numpy()
+        return indices.reshape(-1, np.prod(z.shape[-2:])).cpu().detach().numpy()
 
     def generate_captions(self, batch):
         """generate caption for batch of imgs"""
