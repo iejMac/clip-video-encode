@@ -26,7 +26,7 @@ import fsspec
 import io
 
 # BATCH_SIZE = 256
-BATCH_SIZE = 16
+BATCH_SIZE = 128
 N_DATASET_WORKERS = 6
 CHUNK_SIZE = 200
 
