@@ -77,7 +77,7 @@ def encode_chunk(
         elif frame_tokenization_strategy != "none":
             tokens = []
             for batch in dl:
-                batch = batch.permute(0, 3, 1, 2).float() / 255.  # make channel first and [0, 1]
+                batch = batch.permute(0, 3, 1, 2).float() / 255.0  # make channel first and [0, 1]
                 indices = mapper.tokenize_frames(batch.to(device))
                 tokens.append(indices)
 
@@ -130,8 +130,6 @@ def encode_chunk(
                     vid_meta["clip_frame_similarity"] = sim
 
                 writer.write(frame_embeddings, vid_id, vid_meta)
-
-
 
 
 def read_shard(tempdir, pass_through_keys=None):
@@ -228,11 +226,11 @@ def clip_video_encode(
       distribute:
         str: distribution strategy, currently either slurm or none
       model_name:
-        str: 
+        str:
           - open_clip model name, used for selecting CLIP architecture
           - vqgan config path
       pretrained:
-        str: 
+        str:
           - open_clip pretrained weights name
           - vqgan weights checkpoint path
       captioning_strategy:
@@ -314,7 +312,7 @@ def clip_video_encode(
         pretrained,
         device,
         get_text_tokenizer=(caption_similarity or (captioning_strategy != "none")),
-        get_frame_tokenizer=(frame_tokenization_strategy != 'none'),
+        get_frame_tokenizer=(frame_tokenization_strategy != "none"),
     )
 
     if input_format == "table":
@@ -343,86 +341,63 @@ def clip_video_encode(
             block_size += vid_frames.shape[0]
 
             if i % CHUNK_SIZE == 0:
-                encode_chunk(
-                    frames, ind_dict, writer, fm, meta, ids, use_dst_name, device, input_format=input_format
-                )
+                encode_chunk(frames, ind_dict, writer, fm, meta, ids, use_dst_name, device, input_format=input_format)
                 frames, ind_dict, block_size = [], {}, 0
 
         if len(frames) > 0:  # TODO: make this cleaner
-            encode_chunk(
-                frames, ind_dict, writer, fm, meta, ids, use_dst_name, device, input_format=input_format
-            )
+            encode_chunk(frames, ind_dict, writer, fm, meta, ids, use_dst_name, device, input_format=input_format)
     else:  # WebDataset shard logic
         for shard in shards:
             # try:
-                times = {}
+            times = {}
+            t = time.time()
+            with tempfile.TemporaryDirectory(prefix=f"worker_{global_rank}_") as tempdir:
+                os.chmod(tempdir, 0o777)  # This lets subprocesses from v2np read files in the tempdir
+                folder = "/".join(shard.split("/")[0:-1])
+                fs, output_path = fsspec.core.url_to_fs(folder)
+
+                shard_id = shard.split("/")[-1]
+                tar_bytes = io.BytesIO(fs.open(f"{output_path}/{shard_id}").read())
+                with tarfile.open(fileobj=tar_bytes) as tar:
+                    tar.extractall(tempdir)
+                writer.create_shard(shard_id=int(shard_id.split(".tar")[0]))
+                times["download_and_extract"] = times.get("download_and_extract", 0) + time.time() - t
                 t = time.time()
-                with tempfile.TemporaryDirectory(prefix=f"worker_{global_rank}_") as tempdir:
-                    os.chmod(tempdir, 0o777)  # This lets subprocesses from v2np read files in the tempdir
-                    folder = "/".join(shard.split("/")[0:-1])
-                    fs, output_path = fsspec.core.url_to_fs(folder)
+                vids, ids, meta = read_shard(tempdir, pass_through_keys=pass_through_keys)
+                meta_refs = list(range(len(vids)))
+                fr = FrameReader(
+                    vids,
+                    meta_refs,
+                    take_every_nth=take_every_nth,
+                    target_fps=target_fps,
+                    resize_size=img_size,
+                    workers=frame_workers,
+                    memory_size=frame_memory_size,
+                )
+                fr.start_reading()
 
-                    shard_id = shard.split("/")[-1]
-                    tar_bytes = io.BytesIO(fs.open(f"{output_path}/{shard_id}").read())
-                    with tarfile.open(fileobj=tar_bytes) as tar:
-                        tar.extractall(tempdir)
-                    writer.create_shard(shard_id=int(shard_id.split(".tar")[0]))
-                    times["download_and_extract"] = times.get("download_and_extract", 0) + time.time() - t
-                    t = time.time()
-                    vids, ids, meta = read_shard(tempdir, pass_through_keys=pass_through_keys)
-                    meta_refs = list(range(len(vids)))
-                    fr = FrameReader(
-                        vids,
-                        meta_refs,
-                        take_every_nth=take_every_nth,
-                        target_fps=target_fps,
-                        resize_size=img_size,
-                        workers=frame_workers,
-                        memory_size=frame_memory_size,
+                frames, ind_dict = [], {}
+                block_size = 0
+                i = 0
+                n_frames = 0
+                for vid_frames, info in fr:
+                    i += 1
+
+                    if captioning_strategy == "center":
+                        vid_frames = vid_frames[len(vid_frames) // 2 : len(vid_frames) // 2 + 1]
+
+                    n_frames += len(vid_frames)
+                    frames.append(vid_frames)
+                    ind_dict[info["reference"]] = (
+                        block_size,
+                        block_size + vid_frames.shape[0],
+                        info["dst_name"],
                     )
-                    fr.start_reading()
-
-                    frames, ind_dict = [], {}
-                    block_size = 0
-                    i = 0
-                    n_frames = 0
-                    for vid_frames, info in fr:
-                        i += 1
-
-                        if captioning_strategy == "center":
-                            vid_frames = vid_frames[len(vid_frames) // 2 : len(vid_frames) // 2 + 1]
-
-                        n_frames += len(vid_frames)
-                        frames.append(vid_frames)
-                        ind_dict[info["reference"]] = (
-                            block_size,
-                            block_size + vid_frames.shape[0],
-                            info["dst_name"],
-                        )
-                        block_size += vid_frames.shape[0]
-                        times["read_frames"] = times.get("read_frames", 0) + time.time() - t
-                        t = time.time()
-
-                        if i % CHUNK_SIZE == 0:
-                            encode_chunk(
-                                frames,
-                                ind_dict,
-                                writer,
-                                fm,
-                                meta,
-                                ids,
-                                use_dst_name,
-                                device,
-                                input_format=input_format,
-                                captioning_strategy=captioning_strategy,
-                                frame_tokenization_strategy=frame_tokenization_strategy,
-                                generated_caption_key=generated_caption_key,
-                            )
-                            times["encode"] = times.get("encode", 0) + time.time() - t
-                            t = time.time()
-                            frames, ind_dict, block_size = [], {}, 0
+                    block_size += vid_frames.shape[0]
+                    times["read_frames"] = times.get("read_frames", 0) + time.time() - t
                     t = time.time()
-                    if len(frames) > 0:  # TODO: make this cleaner
+
+                    if i % CHUNK_SIZE == 0:
                         encode_chunk(
                             frames,
                             ind_dict,
@@ -437,12 +412,31 @@ def clip_video_encode(
                             frame_tokenization_strategy=frame_tokenization_strategy,
                             generated_caption_key=generated_caption_key,
                         )
-                    times["encode"] = times.get("encode", 0) + time.time() - t
-                    t = time.time()
-                frame_adjusted = {k: n_frames / v for k, v in times.items()}
-                print(f"Frames/s: {frame_adjusted}")
-            # except Exception as e:  # pylint: disable=(broad-except)
-            #     print(f"Shard {shard} failed: {str(e)}")
+                        times["encode"] = times.get("encode", 0) + time.time() - t
+                        t = time.time()
+                        frames, ind_dict, block_size = [], {}, 0
+                t = time.time()
+                if len(frames) > 0:  # TODO: make this cleaner
+                    encode_chunk(
+                        frames,
+                        ind_dict,
+                        writer,
+                        fm,
+                        meta,
+                        ids,
+                        use_dst_name,
+                        device,
+                        input_format=input_format,
+                        captioning_strategy=captioning_strategy,
+                        frame_tokenization_strategy=frame_tokenization_strategy,
+                        generated_caption_key=generated_caption_key,
+                    )
+                times["encode"] = times.get("encode", 0) + time.time() - t
+                t = time.time()
+            frame_adjusted = {k: n_frames / v for k, v in times.items()}
+            print(f"Frames/s: {frame_adjusted}")
+        # except Exception as e:  # pylint: disable=(broad-except)
+        #     print(f"Shard {shard} failed: {str(e)}")
 
 
 if __name__ == "__main__":
