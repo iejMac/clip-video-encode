@@ -2,12 +2,10 @@
 import sys
 import time
 
-import open_clip
 import math
 import numpy as np
 import torch
 
-from torchvision.transforms import ToPILImage
 from video2numpy.frame_reader import FrameReader
 
 from .reader import Reader

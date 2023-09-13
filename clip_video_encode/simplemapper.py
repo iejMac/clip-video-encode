@@ -26,7 +26,7 @@ def load_vqgan(config, ckpt_path=None, is_gumbel=False):
         model = VQModel(**config.model.params)
     if ckpt_path is not None:
         sd = torch.load(ckpt_path, map_location="cpu")["state_dict"]
-        missing, unexpected = model.load_state_dict(sd, strict=False)
+        # missing, unexpected = model.load_state_dict(sd, strict=False)
     return model.eval()
 
 
@@ -47,13 +47,13 @@ class FrameMapper:
             tokenizer = open_clip.get_tokenizer(oc_model_name) if get_text_tokenizer else None
             preprocess.transforms = [ToPILImage()] + preprocess.transforms[-3:]
         else:
-            # TODO: you need to download checkpoints/configs from (https://github.com/CompVis/taming-transformers/tree/master#overview-of-pretrained-models)
+            # TODO: (https://github.com/CompVis/taming-transformers/tree/master#overview-of-pretrained-models)
             config_path, ckpt_path = model_name, pretrained
             config = load_config(config_path, display=False)
             model = load_vqgan(config, ckpt_path=ckpt_path, is_gumbel=("gumbel" in config_path)).to(device)
             # preprocess = preprocess_vqgan
-            preprocess = dataloader_preprocess = lambda x: x
-            tokenizer = None
+            preprocess = lambda x: x  # dataloader preprocess
+            tokenizer = lambda x: x
 
         self.model = model
         self.preprocess = preprocess
