@@ -58,12 +58,11 @@ def test_utils():
 def test_mapper(oc_model_name):
     # Initialize model:
     device = "cpu"
-    model, _, _ = open_clip.create_model_and_transforms(oc_model_name, pretrained="laion400m_e32", device=device)
 
     model_input_shape = (3, 224, 224)
     model_output_dim = 512 if oc_model_name == "ViT-B-32" else 768
 
-    fm = FrameMapper(model, device)
+    fm = FrameMapper(oc_model_name, "laion400m_e32", device)
 
     bs = 20
     batch = torch.rand(bs, *model_input_shape).to(device)
