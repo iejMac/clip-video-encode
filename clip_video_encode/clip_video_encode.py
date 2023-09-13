@@ -264,6 +264,18 @@ def clip_video_encode(
     else:  # WebDataset, so we distribute shards
         shards = list(braceexpand.braceexpand(src))
 
+        # NOTE: this might need to be improved, some shards may not be complete
+        fs, output_path = fsspec.core.url_to_fs(dest)
+        if not fs.exists(output_path):
+            fs.mkdir(output_path)
+            done_shards = set()
+        else:
+            done_shards = set(int(x.split("/")[-1].split("_")[0]) for x in fs.glob(output_path + "/*.tar"))
+
+        print(f"Removing {len(done_shards)} done_shards from processing queue...")
+        s_ids = [s.split("/")[-1][: -len(".tar")] for s in shards]
+        shards = [s for s_id, s in zip(s_ids, shards) if int(s_id) not in done_shards]
+
     starting_shard_id = 0
     shard_sample_count = 10000
 
