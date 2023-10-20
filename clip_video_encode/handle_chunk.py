@@ -38,7 +38,7 @@ def encode_chunk(
                 vid_id = dst_name[:-4] if use_dst_name else ids[ref]
                 if input_format == "webdataset":
                     vid_meta = meta[ref]
-                else:
+                else: # TODO: CHANGE NEEDS TO HAVE EXTENSIONS
                     vid_meta = {}
                     for k in meta:
                         vid_meta[k] = meta[k][ref].as_py()

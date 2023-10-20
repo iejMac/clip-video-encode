@@ -215,7 +215,9 @@ def clip_video_encode(
                 writer.create_shard(shard_id=int(shard_id.split(".tar")[0]))
                 times["download_and_extract"] = times.get("download_and_extract", 0) + time.time() - t
                 t = time.time()
+
                 vids, ids, meta = read_shard(tempdir, pass_through_keys=pass_through_keys)
+
                 meta_refs = list(range(len(vids)))
                 fr = FrameReader(
                     vids,
@@ -253,7 +255,7 @@ def clip_video_encode(
                         encode_chunk(
                             frames,
                             ind_dict,
-                            writer,
+                            writer, # TODO: turn all args below this into kwarg dict and just unpack
                             fm,
                             meta,
                             ids,
