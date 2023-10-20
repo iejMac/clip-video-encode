@@ -11,7 +11,7 @@ from io import BytesIO
 
 write_fmt = {
     "mp4": lambda data: data,  # pylint: disable=unnecessary-lambda
-    "txt": lambda data: str(data),
+    "txt": lambda data: str(data),  # pylint: disable=unnecessary-lambda
     "json": lambda data: json.dumps(data, indent=4),
 }
 
