@@ -71,6 +71,7 @@ class Reader:
         )
         return vids, ids, meta
 
+
 def read_shard(tempdir, pass_through_keys=None):
     """
     Extracts shard a tempdir and returns references to files inside
@@ -97,7 +98,7 @@ def read_shard(tempdir, pass_through_keys=None):
     for key in keys:
         metadata = {}
 
-        # handles double extensions for weird metadata types f.e. ".optical-flow.npy" vs. ".clip_b.npy" 
+        # handles double extensions for weird metadata types f.e. ".optical-flow.npy" vs. ".clip_b.npy"
         exts = [".".join(f.split(".")[1:]) for f in glob.glob(os.path.join(tempdir, f"{key}.*"))]
         desired_exts = list(set(pass_through_keys).intersection(set(exts)))
 

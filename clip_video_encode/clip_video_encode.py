@@ -255,7 +255,7 @@ def clip_video_encode(
                         encode_chunk(
                             frames,
                             ind_dict,
-                            writer, # TODO: turn all args below this into kwarg dict and just unpack
+                            writer,  # TODO: turn all args below this into kwarg dict and just unpack
                             fm,
                             meta,
                             ids,

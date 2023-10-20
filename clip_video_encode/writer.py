@@ -9,11 +9,7 @@ import webdataset as wds
 from io import BytesIO
 
 
-write_fmt = {
-    "mp4": lambda data: data,
-    "txt": lambda data: str(data),
-    "json": lambda data: json.dumps(data, indent=4)
-}
+write_fmt = {"mp4": lambda data: data, "txt": lambda data: str(data), "json": lambda data: json.dumps(data, indent=4)}
 
 
 class FileWriter:
@@ -34,7 +30,7 @@ class FileWriter:
             np.save(nbp, arr)
             f.write(nbp.getbuffer())
 
-        for ext in metadata:    
+        for ext in metadata:
             md_filename = os.path.join(self.output_folder, f"{key}.{ext}")
             write_data = write_fmt[ext](metadata[ext]) if ext in write_fmt else metadata[ext]
             with self.fs.open(md_filename, "w") as f:
