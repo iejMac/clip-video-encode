@@ -1,4 +1,7 @@
 """handles input parsing."""
+import json
+import glob
+
 import pyarrow.parquet as pq
 import pyarrow.csv as csv_pq
 import pyarrow as pa
@@ -66,3 +69,47 @@ class Reader:
             [(meta, self.df[meta]) for meta in self.meta_columns]
         )
         return vids, ids, meta
+
+
+# TODO: hard refactor
+def read_shard(tempdir, pass_through_keys=None):
+    """
+    Extract video filepaths, video ids, and metadata from the contents of an opened WebDataset shard
+
+    Input:
+        tempdir:
+            path to directory containing contents of an opened WebDataset shard with input data
+    """
+    if pass_through_keys is None:
+        pass_through_keys = []
+
+    vids = sorted(
+        [f.split("/")[-1] for f in glob.glob(tempdir + "/" + "*.mp4")]
+    )  # TODO: parameterize the video extension
+
+    has_txt = len(glob.glob(tempdir + "/" + "*.txt")) > 0
+    has_json = len(glob.glob(tempdir + "/" + "*.json")) > 0
+
+    keys = [x.split(".mp4")[0] for x in vids]
+    meta = []
+    for key in keys:
+        if has_json and "json" in pass_through_keys:
+            with open(tempdir + "/" + key + ".json", "rb") as f:
+                metadata = json.load(f)
+        else:
+            metadata = {}
+
+        if has_txt and "txt" in pass_through_keys:
+            with open(tempdir + "/" + key + ".txt", "r", encoding="UTF-8") as f:
+                txt = f.read()
+            metadata["caption"] = txt
+
+        if "mp4" in pass_through_keys:
+            with open(tempdir + "/" + key + ".mp4", "rb") as f:
+                mp4_video = f.read()
+                metadata["mp4_video"] = mp4_video
+
+        meta.append(metadata)
+
+    vids = [tempdir + "/" + v for v in vids]
+    return vids, keys, meta
