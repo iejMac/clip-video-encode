@@ -67,6 +67,8 @@ def encode_chunk(
                     vid_meta = {"json": {}}
                     for k in meta:
                         vid_meta["json"][k] = meta[k][ref].as_py()
+                        if "caption" in meta[k][ref]:
+                            vid_meta["txt"] = meta[k][ref]["caption"]
 
                 video_tokens = tokens[i0:it]
                 writer.write(video_tokens, vid_id, vid_meta)
@@ -94,6 +96,8 @@ def encode_chunk(
                     vid_meta = {"json": {}}
                     for k in meta:
                         vid_meta["json"][k] = meta[k][ref].as_py()
+                        if "caption" in meta[k][ref]:
+                            vid_meta["txt"] = meta[k][ref]["caption"]
 
                 frame_embeddings = embeddings[i0:it]
                 if caption_embs is not None:
