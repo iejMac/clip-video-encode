@@ -40,25 +40,6 @@ class FileWriter:
             with self.fs.open(md_filename, "w") as f:
                 f.write(write_data)
 
-        '''
-        if metadata is not None:
-            if "caption" in metadata:
-                caption = str(metadata.pop("caption"))
-                caption_filename = os.path.join(self.output_folder, key + ".txt")
-                with self.fs.open(caption_filename, "w") as f:
-                    f.write(caption)
-            if len(metadata) > 0:
-                if "mp4_video" in metadata:
-                    vid_bytes = metadata.pop("mp4_video")
-                    vid_filename = os.path.join(self.output_folder, key + ".mp4")
-                    with self.fs.open(vid_filename, "w") as f:
-                        f.write(vid_bytes)
-                j = json.dumps(metadata, indent=4)
-                meta_filename = os.path.join(self.output_folder, key + ".json")
-                with self.fs.open(meta_filename, "w") as f:
-                    f.write(j)
-        '''
-
     def close(self):
         pass
 
@@ -108,7 +89,7 @@ class WebDatasetWriter:
             sample[self.encode_format] = arr
 
         for ext in metadata:
-            sample[ext] = write_fmt[ext](metadata[ext])
+            sample[ext] = write_fmt[ext](metadata[ext]) if ext in write_fmt else metadata[ext]
 
         self.tarwriter.write(sample)
         self.count += 1
