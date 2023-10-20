@@ -9,7 +9,11 @@ import webdataset as wds
 from io import BytesIO
 
 
-write_fmt = {"mp4": lambda data: data, "txt": lambda data: str(data), "json": lambda data: json.dumps(data, indent=4)}
+write_fmt = {
+    "mp4": lambda data: data,  # pylint: disable=unnecessary-lambda
+    "txt": lambda data: str(data),
+    "json": lambda data: json.dumps(data, indent=4),
+}
 
 
 class FileWriter:

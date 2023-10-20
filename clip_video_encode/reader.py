@@ -90,8 +90,8 @@ def read_shard(tempdir, pass_through_keys=None):
     )  # TODO: parameterize the video extension
 
     read_funcs = {
-        "json": lambda path: json.load(open(path, "rb")),
-        "txt": lambda path: open(path, "r", encoding="UTF-8").read(),
+        "json": lambda path: json.load(open(path, "rb")),  # pylint: disable=consider-using-with
+        "txt": lambda path: open(path, "r", encoding="UTF-8").read(),  # pylint: disable=consider-using-with
     }
 
     keys, meta = [x.split(".mp4")[0] for x in vids], []
@@ -104,7 +104,9 @@ def read_shard(tempdir, pass_through_keys=None):
 
         for ext in desired_exts:
             file_path = os.path.join(tempdir, f"{key}.{ext}")
-            metadata[ext] = read_funcs[ext](file_path) if ext in read_funcs else open(path, "rb").read()
+            metadata[ext] = (
+                read_funcs[ext](file_path) if ext in read_funcs else open(path, "rb").read()
+            )  # pylint: disable=consider-using-with
 
         meta.append(metadata)
 
