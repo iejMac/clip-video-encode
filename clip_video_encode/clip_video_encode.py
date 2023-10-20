@@ -3,14 +3,12 @@ import sys
 import time
 
 import math
-import numpy as np
 import torch
 
 from video2numpy.frame_reader import FrameReader
 
 from .reader import Reader, read_shard
 from .simplemapper import FrameMapper
-from .utils import block2dl
 from .writer import FileWriter, WebDatasetWriter
 from .distributed import world_info_from_env
 from .handle_chunk import encode_chunk
@@ -18,9 +16,7 @@ from .handle_chunk import encode_chunk
 import tarfile
 import tempfile
 import os
-import json
 import braceexpand
-import glob
 import fsspec
 import io
 
