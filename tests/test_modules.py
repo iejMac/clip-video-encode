@@ -86,7 +86,7 @@ def test_writer(writer_type):
         vid_embeds = [np.ones((N_FRAMES, lat_dim), dtype=float) * i for i in range(N_VIDS)]
 
         for i, emb in enumerate(vid_embeds):
-            fake_metadata = {"caption": str(i), "x": i}
+            fake_metadata = {"json": {"caption": str(i), "x": i}, "txt": str(i)}
             writer.write(emb, str(i), fake_metadata)
         writer.close()
 
