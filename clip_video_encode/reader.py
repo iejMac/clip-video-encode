@@ -107,7 +107,7 @@ def read_shard(tempdir, pass_through_keys=None):
             if ext in read_funcs:
                 read_data = read_funcs[ext](file_path)
             else:
-                read_data = open(path, "rb").read()  # pylint: disable=consider-using-with
+                read_data = open(file_path, "rb").read()  # pylint: disable=consider-using-with
             metadata[ext] = read_data
 
         meta.append(metadata)
