@@ -1,4 +1,5 @@
 """handles input parsing."""
+import os
 import json
 import glob
 
@@ -71,45 +72,45 @@ class Reader:
         return vids, ids, meta
 
 
-# TODO: hard refactor
 def read_shard(tempdir, pass_through_keys=None):
     """
-    Extract video filepaths, video ids, and metadata from the contents of an opened WebDataset shard
+    Extracts shard a tempdir and returns references to files inside
 
     Input:
         tempdir:
             path to directory containing contents of an opened WebDataset shard with input data
+        pass_through_keys:
+            extensions we would like to keep from the source shard in the output shard
     """
     if pass_through_keys is None:
         pass_through_keys = []
 
     vids = sorted(
-        [f.split("/")[-1] for f in glob.glob(tempdir + "/" + "*.mp4")]
+        [f.split("/")[-1] for f in glob.glob(os.path.join(tempdir, "*.mp4"))]
     )  # TODO: parameterize the video extension
 
-    has_txt = len(glob.glob(tempdir + "/" + "*.txt")) > 0
-    has_json = len(glob.glob(tempdir + "/" + "*.json")) > 0
+    read_funcs = {
+        "json": lambda path: json.load(open(path, "rb")),  # pylint: disable=consider-using-with
+        "txt": lambda path: open(path, "r", encoding="UTF-8").read(),  # pylint: disable=consider-using-with
+    }
 
-    keys = [x.split(".mp4")[0] for x in vids]
-    meta = []
+    keys, meta = [x.split(".mp4")[0] for x in vids], []
     for key in keys:
-        if has_json and "json" in pass_through_keys:
-            with open(tempdir + "/" + key + ".json", "rb") as f:
-                metadata = json.load(f)
-        else:
-            metadata = {}
+        metadata = {}
 
-        if has_txt and "txt" in pass_through_keys:
-            with open(tempdir + "/" + key + ".txt", "r", encoding="UTF-8") as f:
-                txt = f.read()
-            metadata["caption"] = txt
+        # handles double extensions for weird metadata types f.e. ".optical-flow.npy" vs. ".clip_b.npy"
+        exts = [".".join(f.split(".")[1:]) for f in glob.glob(os.path.join(tempdir, f"{key}.*"))]
+        desired_exts = list(set(pass_through_keys).intersection(set(exts)))
 
-        if "mp4" in pass_through_keys:
-            with open(tempdir + "/" + key + ".mp4", "rb") as f:
-                mp4_video = f.read()
-                metadata["mp4_video"] = mp4_video
+        for ext in desired_exts:
+            file_path = os.path.join(tempdir, f"{key}.{ext}")
+            if ext in read_funcs:
+                read_data = read_funcs[ext](file_path)
+            else:
+                read_data = open(path, "rb").read()  # pylint: disable=consider-using-with
+            metadata[ext] = read_data
 
         meta.append(metadata)
 
-    vids = [tempdir + "/" + v for v in vids]
+    vids = [os.path.join(tempdir, v) for v in vids]
     return vids, keys, meta

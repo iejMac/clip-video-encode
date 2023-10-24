@@ -9,6 +9,13 @@ import webdataset as wds
 from io import BytesIO
 
 
+write_fmt = {
+    "mp4": lambda data: data,  # pylint: disable=unnecessary-lambda
+    "txt": lambda data: str(data),  # pylint: disable=unnecessary-lambda
+    "json": lambda data: json.dumps(data, indent=4),
+}
+
+
 class FileWriter:
     """Writes output as files."""
 
@@ -19,7 +26,7 @@ class FileWriter:
 
     def write(self, arr, key, metadata=None):
         """write sample to file."""
-        key = str(key)
+        key, metadata = str(key), {} if metadata is None else metadata
 
         save_pth = os.path.join(self.output_folder, key + ".npy")
         with self.fs.open(save_pth, "wb") as f:
@@ -27,22 +34,11 @@ class FileWriter:
             np.save(nbp, arr)
             f.write(nbp.getbuffer())
 
-        if metadata is not None:
-            if "caption" in metadata:
-                caption = str(metadata.pop("caption"))
-                caption_filename = os.path.join(self.output_folder, key + ".txt")
-                with self.fs.open(caption_filename, "w") as f:
-                    f.write(caption)
-            if len(metadata) > 0:
-                if "mp4_video" in metadata:
-                    vid_bytes = metadata.pop("mp4_video")
-                    vid_filename = os.path.join(self.output_folder, key + ".mp4")
-                    with self.fs.open(vid_filename, "w") as f:
-                        f.write(vid_bytes)
-                j = json.dumps(metadata, indent=4)
-                meta_filename = os.path.join(self.output_folder, key + ".json")
-                with self.fs.open(meta_filename, "w") as f:
-                    f.write(j)
+        for ext in metadata:
+            md_filename = os.path.join(self.output_folder, f"{key}.{ext}")
+            write_data = write_fmt[ext](metadata[ext]) if ext in write_fmt else metadata[ext]
+            with self.fs.open(md_filename, "w") as f:
+                f.write(write_data)
 
     def close(self):
         pass
@@ -82,7 +78,7 @@ class WebDatasetWriter:
 
     def write(self, arr, key, metadata=None):
         """write sample to current shard."""
-        key = str(key)
+        key, metadata = str(key), {} if metadata is None else metadata
         if self.count >= self.maxcount:
             self.shard_id += 1
             self.count = 0
@@ -92,14 +88,8 @@ class WebDatasetWriter:
         if arr is not None:
             sample[self.encode_format] = arr
 
-        if metadata is not None:
-            if "caption" in metadata:
-                sample["txt"] = str(metadata.pop("caption"))
-            if len(metadata) > 0:
-                if "mp4_video" in metadata:
-                    vid_bytes = metadata.pop("mp4_video")
-                    sample["mp4"] = vid_bytes
-                sample["json"] = json.dumps(metadata, indent=4)
+        for ext in metadata:
+            sample[ext] = write_fmt[ext](metadata[ext]) if ext in write_fmt else metadata[ext]
 
         self.tarwriter.write(sample)
         self.count += 1

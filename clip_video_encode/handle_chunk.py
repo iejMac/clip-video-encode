@@ -38,14 +38,15 @@ def encode_chunk(
                 vid_id = dst_name[:-4] if use_dst_name else ids[ref]
                 if input_format == "webdataset":
                     vid_meta = meta[ref]
+                    vid_meta["json"] = vid_meta["json"] if "json" in vid_meta else {}
                 else:
-                    vid_meta = {}
+                    vid_meta = {"json": {}}
                     for k in meta:
-                        vid_meta[k] = meta[k][ref].as_py()
+                        vid_meta["json"][k] = meta[k][ref].as_py()
 
                 # NOTE: Warning this might overwrite previous caption
                 # NOTE: for now assumes there is only one caption
-                vid_meta[generated_caption_key] = captions[i0:it][0]
+                vid_meta["json"][generated_caption_key] = captions[i0:it][0]
 
                 # TODO: we should be able to do both at once with a CoCa model
                 writer.write(None, vid_id, vid_meta)
@@ -63,9 +64,11 @@ def encode_chunk(
                 if input_format == "webdataset":
                     vid_meta = meta[ref]
                 else:
-                    vid_meta = {}
+                    vid_meta = {"json": {}}
                     for k in meta:
-                        vid_meta[k] = meta[k][ref].as_py()
+                        vid_meta["json"][k] = meta[k][ref].as_py()
+                    if "caption" in vid_meta["json"]:
+                        vid_meta["txt"] = vid_meta["json"]["caption"]
 
                 video_tokens = tokens[i0:it]
                 writer.write(video_tokens, vid_id, vid_meta)
@@ -90,9 +93,11 @@ def encode_chunk(
                 if input_format == "webdataset":
                     vid_meta = meta[ref]
                 else:
-                    vid_meta = {}
+                    vid_meta = {"json": {}}
                     for k in meta:
-                        vid_meta[k] = meta[k][ref].as_py()
+                        vid_meta["json"][k] = meta[k][ref].as_py()
+                    if "caption" in vid_meta["json"]:
+                        vid_meta["txt"] = vid_meta["json"]["caption"]
 
                 frame_embeddings = embeddings[i0:it]
                 if caption_embs is not None:
@@ -102,6 +107,7 @@ def encode_chunk(
 
                     sim = (fe @ ce.T).tolist()
 
-                    vid_meta["clip_frame_similarity"] = sim
+                    vid_meta["json"] = vid_meta["json"] if "json" in vid_meta else {}
+                    vid_meta["json"]["clip_frame_similarity"] = sim
 
                 writer.write(frame_embeddings, vid_id, vid_meta)
