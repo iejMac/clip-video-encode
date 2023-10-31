@@ -52,6 +52,7 @@ def encode_chunk(
                 writer.write(None, vid_id, vid_meta)
         elif frame_tokenization_strategy != "none":
             tokens = []
+            BATCH_SIZE=64
             for batch in dl:
                 indices = mapper.tokenize_frames(batch.to(device))
                 tokens.append(indices)
