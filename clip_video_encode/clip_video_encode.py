@@ -133,17 +133,11 @@ def clip_video_encode(
             fs.mkdir(output_path)
             done_shards = set()
         else:
-            # done_shards = set(int(x.split("/")[-1].split("_")[0]) for x in fs.glob(output_path + "/*.tar"))
             done_shards = set(x.split("/")[-1].split("_")[0] for x in fs.glob(output_path + "/*.tar"))
 
         print(f"Removing {len(done_shards)} done_shards from processing queue...")
 
-        '''
-        # s_ids = [s.split("/")[-1][: -len(".tar")] for s in shards]
-        s_ids = [get_sid(src, s) for s in shards]
-        print(s_ids[:5])
-        quit()
-
+        ''' TODO: finish this
 	def get_sids(be_template):
 	    shards = list(braceexpand.braceexpand(be_template))
 
@@ -154,7 +148,7 @@ def clip_video_encode(
 	    write_shard_id = "".join(values)           
 	    return write_shard_id
         '''
-        # shards = [s for s_id, s in zip(s_ids, shards) if int(s_id) not in done_shards]
+        shards = [s for s_id, s in zip(s_ids, shards) if int(s_id) not in done_shards]
 
     starting_shard_id = 0
     shard_sample_count = 10000
