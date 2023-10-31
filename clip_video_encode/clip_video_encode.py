@@ -58,6 +58,7 @@ def clip_video_encode(
     frame_tokenization_strategy="none",
     generated_caption_key="generated_caption",  # this will put it in json, make this 'caption' if you want it in txt
     pass_through_keys="mp4,txt,json",
+    vid_ext="mp4",
     caption_similarity=False,
     img_size=224,
 ):
@@ -132,11 +133,28 @@ def clip_video_encode(
             fs.mkdir(output_path)
             done_shards = set()
         else:
-            done_shards = set(int(x.split("/")[-1].split("_")[0]) for x in fs.glob(output_path + "/*.tar"))
+            # done_shards = set(int(x.split("/")[-1].split("_")[0]) for x in fs.glob(output_path + "/*.tar"))
+            done_shards = set(x.split("/")[-1].split("_")[0] for x in fs.glob(output_path + "/*.tar"))
 
         print(f"Removing {len(done_shards)} done_shards from processing queue...")
-        s_ids = [s.split("/")[-1][: -len(".tar")] for s in shards]
-        shards = [s for s_id, s in zip(s_ids, shards) if int(s_id) not in done_shards]
+
+        '''
+        # s_ids = [s.split("/")[-1][: -len(".tar")] for s in shards]
+        s_ids = [get_sid(src, s) for s in shards]
+        print(s_ids[:5])
+        quit()
+
+	def get_sids(be_template):
+	    shards = list(braceexpand.braceexpand(be_template))
+
+	    values = extract_braceexpand_values(be_template, path)
+	    max_values = extract_braceexpand_values(be_template, list(braceexpand.braceexpand(be_template))[-1])
+	    for i in range(len(values)):
+		values[i] = values[i].zfill(len(max_values[i]))
+	    write_shard_id = "".join(values)           
+	    return write_shard_id
+        '''
+        # shards = [s for s_id, s in zip(s_ids, shards) if int(s_id) not in done_shards]
 
     starting_shard_id = 0
     shard_sample_count = 10000
@@ -213,6 +231,17 @@ def clip_video_encode(
     else:  # WebDataset shard logic
         for shard in shards:
             try:
+
+                values = extract_braceexpand_values(src, shard)
+                max_values = extract_braceexpand_values(src, list(braceexpand.braceexpand(src))[-1])
+                for i in range(len(values)):
+                    values[i] = values[i].zfill(len(max_values[i]))
+                write_shard_id = "".join(values)           
+
+                # TODO: find better way of doing this earlier
+                if write_shard_id in done_shards:
+                    continue
+
                 times = {}
                 t = time.time()
                 with tempfile.TemporaryDirectory(prefix=f"worker_{global_rank}_") as tempdir:
@@ -222,12 +251,6 @@ def clip_video_encode(
 
                     read_shard_id = shard.split("/")[-1].split(".tar")[0]
 
-                    values = extract_braceexpand_values(src, shard)
-                    max_values = extract_braceexpand_values(src, list(braceexpand.braceexpand(src))[-1])
-                    for i in range(len(values)):
-                        values[i] = values[i].zfill(len(max_values[i]))
-                    write_shard_id = "".join(values)           
-
                     tar_bytes = io.BytesIO(fs.open(f"{output_path}/{read_shard_id}.tar").read())
                     with tarfile.open(fileobj=tar_bytes) as tar:
                         tar.extractall(tempdir)
@@ -235,7 +258,7 @@ def clip_video_encode(
                     times["download_and_extract"] = times.get("download_and_extract", 0) + time.time() - t
                     t = time.time()
 
-                    vids, ids, meta = read_shard(tempdir, pass_through_keys=pass_through_keys)
+                    vids, ids, meta = read_shard(tempdir, vid_ext, pass_through_keys=pass_through_keys)
 
                     meta_refs = list(range(len(vids)))
                     fr = FrameReader(

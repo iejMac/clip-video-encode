@@ -72,7 +72,7 @@ class Reader:
         return vids, ids, meta
 
 
-def read_shard(tempdir, pass_through_keys=None):
+def read_shard(tempdir, vid_ext="mp4", pass_through_keys=None):
     """
     Extracts shard a tempdir and returns references to files inside
 
@@ -86,7 +86,7 @@ def read_shard(tempdir, pass_through_keys=None):
         pass_through_keys = []
 
     vids = sorted(
-        [f.split("/")[-1] for f in glob.glob(os.path.join(tempdir, "*.mp4"))]
+        [f.split("/")[-1] for f in glob.glob(os.path.join(tempdir, f"*.{vid_ext}"))]
     )  # TODO: parameterize the video extension
 
     read_funcs = {
@@ -94,7 +94,7 @@ def read_shard(tempdir, pass_through_keys=None):
         "txt": lambda path: open(path, "r", encoding="UTF-8").read(),  # pylint: disable=consider-using-with
     }
 
-    keys, meta = [x.split(".mp4")[0] for x in vids], []
+    keys, meta = [x.split(f".{vid_ext}")[0] for x in vids], []
     for key in keys:
         metadata = {}
 
