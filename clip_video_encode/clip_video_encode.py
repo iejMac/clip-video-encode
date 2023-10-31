@@ -138,14 +138,14 @@ def clip_video_encode(
         print(f"Removing {len(done_shards)} done_shards from processing queue...")
 
         # TODO: finish this
-	# def get_sids(be_template):
-	#     shards = list(braceexpand.braceexpand(be_template))
-	#     values = extract_braceexpand_values(be_template, path)
-	#     max_values = extract_braceexpand_values(be_template, list(braceexpand.braceexpand(be_template))[-1])
-	#     for i in range(len(values)):
-	#	values[i] = values[i].zfill(len(max_values[i]))
-	#     write_shard_id = "".join(values)
-	#     return write_shard_id
+        # def get_sids(be_template):
+        #     shards = list(braceexpand.braceexpand(be_template))
+        #     values = extract_braceexpand_values(be_template, path)
+        #     max_values = extract_braceexpand_values(be_template, list(braceexpand.braceexpand(be_template))[-1])
+        #     for i in range(len(values)):
+        # 	values[i] = values[i].zfill(len(max_values[i]))
+        #     write_shard_id = "".join(values)
+        #     return write_shard_id
         shards = [s for s_id, s in zip(s_ids, shards) if int(s_id) not in done_shards]
 
     starting_shard_id = 0
