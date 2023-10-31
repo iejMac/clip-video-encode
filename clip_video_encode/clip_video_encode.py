@@ -144,7 +144,7 @@ def clip_video_encode(
 	#     max_values = extract_braceexpand_values(be_template, list(braceexpand.braceexpand(be_template))[-1])
 	#     for i in range(len(values)):
 	#	values[i] = values[i].zfill(len(max_values[i]))
-	#     write_shard_id = "".join(values)           
+	#     write_shard_id = "".join(values)
 	#     return write_shard_id
         shards = [s for s_id, s in zip(s_ids, shards) if int(s_id) not in done_shards]
 
