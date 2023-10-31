@@ -31,10 +31,11 @@ class FrameMapper:
             # https://github.com/ai-forever/MoVQGAN
             model = get_movqgan_model(model_name, pretrained=True, device=device)
 
-            preprocess = T.Compose([
-                ToPILImage(),
-
-            ])
+            preprocess = T.Compose(
+                [
+                    ToPILImage(),
+                ]
+            )
 
             preprocess = lambda x: x  # dataloader preprocess
             tokenizer = lambda x: x
