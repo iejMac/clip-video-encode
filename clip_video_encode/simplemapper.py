@@ -1,39 +1,19 @@
 """simplemapper - simple frame -> embedding mapper."""
 import torch
-import numpy as np
 import open_clip
+import torchvision.transforms as T
 
 from torchvision.transforms import ToPILImage
 
 try:
-    from omegaconf import OmegaConf
-    from taming.models.vqgan import VQModel, GumbelVQ
+    from movqgan import get_movqgan_model
 except ImportError as e:
     print("Missing imports")
 
 
-def load_config(config_path, display=False):
-    config = OmegaConf.load(config_path)
-    if display:
-        print(yaml.dump(OmegaConf.to_container(config)))
-    return config
-
-
-def load_vqgan(config, ckpt_path=None, is_gumbel=False):
-    if is_gumbel:
-        model = GumbelVQ(**config.model.params)
-    else:
-        model = VQModel(**config.model.params)
-    if ckpt_path is not None:
-        sd = torch.load(ckpt_path, map_location="cpu")["state_dict"]
-        _, _ = model.load_state_dict(sd, strict=False)
-        # missing, unexpected = model.load_state_dict(sd, strict=False)
-    return model.eval()
-
-
 def preprocess_vqgan(x):
-    x = 2.0 * x - 1.0
-    return x
+    x = x.float() / 127.5 - 1
+    return x.permute(0, 3, 1, 2)
 
 
 class FrameMapper:
@@ -48,11 +28,15 @@ class FrameMapper:
             tokenizer = open_clip.get_tokenizer(oc_model_name) if get_text_tokenizer else None
             preprocess.transforms = [ToPILImage()] + preprocess.transforms[-3:]
         else:
-            # TODO: (https://github.com/CompVis/taming-transformers/tree/master#overview-of-pretrained-models)
-            config_path, ckpt_path = model_name, pretrained
-            config = load_config(config_path, display=False)
-            model = load_vqgan(config, ckpt_path=ckpt_path, is_gumbel=("gumbel" in config_path)).to(device)
-            # preprocess = preprocess_vqgan
+            # https://github.com/ai-forever/MoVQGAN
+            model = get_movqgan_model(model_name, pretrained=True, device=device)
+
+            preprocess = T.Compose(
+                [
+                    ToPILImage(),
+                ]
+            )
+
             preprocess = lambda x: x  # dataloader preprocess
             tokenizer = lambda x: x
 
@@ -75,8 +59,8 @@ class FrameMapper:
     def tokenize_frames(self, batch):
         with torch.no_grad():
             batch = preprocess_vqgan(batch)
-            z, _, [_, _, indices] = self.model.encode(batch)
-        return indices.reshape(-1, np.prod(z.shape[-2:])).cpu().detach().numpy()
+            _, _, [_, _, indices] = self.model.encode(batch)
+        return indices.reshape(batch.shape[0], -1).cpu().detach().numpy()
 
     def generate_captions(self, batch):
         """generate caption for batch of imgs"""

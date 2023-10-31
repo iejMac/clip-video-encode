@@ -53,7 +53,6 @@ def encode_chunk(
         elif frame_tokenization_strategy != "none":
             tokens = []
             for batch in dl:
-                batch = batch.permute(0, 3, 1, 2).float() / 255.0  # make channel first and [0, 1]
                 indices = mapper.tokenize_frames(batch.to(device))
                 tokens.append(indices)
 
