@@ -32,10 +32,10 @@ def extract_braceexpand_values(be_template, path):
     # Construct regex pattern based on the braceexpand string
     reg_template = re.sub(r"\{.*?\}", r"(\\d+)", be_template)
     reg_template = reg_template.replace(".", r"\.")
-    
+
     pattern = re.compile(reg_template)
     match = pattern.match(path)
-    
+
     return list(match.groups())
 
 
@@ -137,7 +137,7 @@ def clip_video_encode(
 
         print(f"Removing {len(done_shards)} done_shards from processing queue...")
 
-        ''' TODO: finish this
+        """ TODO: finish this
 	def get_sids(be_template):
 	    shards = list(braceexpand.braceexpand(be_template))
 
@@ -147,7 +147,7 @@ def clip_video_encode(
 		values[i] = values[i].zfill(len(max_values[i]))
 	    write_shard_id = "".join(values)           
 	    return write_shard_id
-        '''
+        """
         shards = [s for s_id, s in zip(s_ids, shards) if int(s_id) not in done_shards]
 
     starting_shard_id = 0
@@ -225,12 +225,11 @@ def clip_video_encode(
     else:  # WebDataset shard logic
         for shard in shards:
             try:
-
                 values = extract_braceexpand_values(src, shard)
                 max_values = extract_braceexpand_values(src, list(braceexpand.braceexpand(src))[-1])
                 for i in range(len(values)):
                     values[i] = values[i].zfill(len(max_values[i]))
-                write_shard_id = "".join(values)           
+                write_shard_id = "".join(values)
 
                 # TODO: find better way of doing this earlier
                 if write_shard_id in done_shards:
