@@ -146,6 +146,7 @@ def clip_video_encode(
         # 	values[i] = values[i].zfill(len(max_values[i]))
         #     write_shard_id = "".join(values)
         #     return write_shard_id
+        s_ids = [s.split("/")[-1][: -len(".tar")] for s in shards]
         shards = [s for s_id, s in zip(s_ids, shards) if int(s_id) not in done_shards]
 
     starting_shard_id = 0
