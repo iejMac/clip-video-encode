@@ -1,6 +1,5 @@
 """simplemapper - simple frame -> embedding mapper."""
 import torch
-import numpy as np
 import open_clip
 import torchvision.transforms as T
 
@@ -59,7 +58,7 @@ class FrameMapper:
     def tokenize_frames(self, batch):
         with torch.no_grad():
             batch = preprocess_vqgan(batch)
-            z, _, [_, _, indices] = self.model.encode(batch)
+            _, _, [_, _, indices] = self.model.encode(batch)
         return indices.reshape(batch.shape[0], -1).cpu().detach().numpy()
 
     def generate_captions(self, batch):
