@@ -225,8 +225,8 @@ def clip_video_encode(
             try:
                 values = extract_braceexpand_values(src, shard)
                 max_values = extract_braceexpand_values(src, list(braceexpand.braceexpand(src))[-1])
-                for i in range(len(values)):
-                    values[i] = values[i].zfill(len(max_values[i]))
+                for i, val in enumerate(values):
+                    values[i] = val.zfill(len(max_values[i]))
                 write_shard_id = "".join(values)
 
                 # TODO: find better way of doing this earlier
