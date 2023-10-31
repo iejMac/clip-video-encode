@@ -5,7 +5,11 @@ import open_clip
 import torchvision.transforms as T
 
 from torchvision.transforms import ToPILImage
-from movqgan import get_movqgan_model
+
+try:
+    from movqgan import get_movqgan_model
+except ImportError as e:
+    print("Missing imports")
 
 
 def preprocess_vqgan(x):
